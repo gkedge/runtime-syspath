@@ -1,21 +1,29 @@
+""" pytest module to test the runtime_syspath.add_srcdirs_to_syspath module"""
 import sys
 from pathlib import Path
 from typing import List
 
 import pytest
 
-from src import __version__
-from src import add_srcdirs_to_syspath
+# pylint: disable=import-error
+from runtime_syspath import __version__
+from runtime_syspath import add_srcdirs_to_syspath
 
 
-def test_version():
+def test_version() -> None:
+    """
+    Test version string in runtime_syspath.__init__.py
+    """
     assert __version__ == '0.1.0'
 
 
-def test_add_srcdirs_to_syspath():
+def test_add_srcdirs_to_syspath() -> None:
+    """
+    Test add_srcdirs_to_syspath in runtime_syspath.add_srcdirs_to_syspath.py module.
+    """
     add_srcdirs_to_syspath()
 
-    # Test to see if runtime-syspath's 'src' directory in now in sys.path
+    # Test to see if runtime_syspath's 'src' directory in now in sys.path
     src_path: Path = Path.cwd() / 'src'
     src_path_str: str = str(src_path)
     sys_paths: List[str] = list()
