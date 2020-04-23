@@ -1,10 +1,15 @@
+""" add_srcdirs_to_syspath module. """
 import sys
 
 from pathlib import Path
 from typing import Generator, Set
 
 
-def add_srcdirs_to_syspath():
+def add_srcdirs_to_syspath() -> None:
+    """
+    Add all src directories under current working directory to sys.path.
+    :return: None
+    """
     all_projects_src_dirs: Generator[Path, None, None] = Path.cwd().rglob('src')
     prior_sys_path = sys.path.copy()
     for tested_src in all_projects_src_dirs:

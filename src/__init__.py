@@ -1,4 +1,5 @@
-__version__ = '0.1.0'
+# pylint: disable=invalid-name
+""" __init__ module. """
+# pylint: disable=import-error
 
-# noinspection PyUnresolvedReferences
-from .add_srcdirs_to_syspath import add_srcdirs_to_syspath  # noqa
+__version__ = '0.1.0'
