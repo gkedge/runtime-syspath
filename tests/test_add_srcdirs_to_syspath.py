@@ -1,4 +1,4 @@
-""" pytest module to test the runtime_syspath.add_srcdirs_to_syspath module"""
+""" pytest module to tests the runtime_syspath.add_srcdirs_to_syspath module"""
 import sys
 from pathlib import Path
 from typing import List
@@ -17,14 +17,14 @@ def test_version() -> None:
     assert __version__ == '0.1.0'
 
 
-def test_add_srcdirs_to_syspath() -> None:
+def test_add_srcdirs_to_syspath(root_path: Path) -> None:
     """
     Test add_srcdirs_to_syspath in runtime_syspath.add_srcdirs_to_syspath.py module.
     """
     add_srcdirs_to_syspath()
 
     # Test to see if runtime_syspath's 'src' directory in now in sys.path
-    src_path: Path = Path.cwd() / 'src'
+    src_path: Path = root_path / 'src'
     src_path_str: str = str(src_path)
     sys_paths: List[str] = list()
     found_src_path: bool = False
