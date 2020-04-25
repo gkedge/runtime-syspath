@@ -100,6 +100,7 @@ directory trees:
 > :bulb: Since programmatically adding to a `sys.path` impairs an IDE's
 > ability to do static import discovery and leveraging IDE refactoring
 > features between the solution source and the test code, an IDE user
-> would need to manually mark all `src` directories as such:
+> would need to manually mark all `src` directories as such.  
+> PyCharm example:
 >
 > ![image](docs/images/IDE_SetSrc.png)
