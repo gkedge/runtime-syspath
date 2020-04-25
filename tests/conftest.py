@@ -7,7 +7,7 @@ import pytest
 
 # None of this kind of work find the root or append 'src' dirs to the 'sys.path' need be
 # performed by conftest.py's or main()'s using the runtime_syspath::add_srcdirs_to_syspath
-# function. This is only necessary for testing that function.
+# function. See README.md. This is only necessary for testing that function.
 def get_root_path() -> Path:
     """
     If CWD is not the project root (containing root 'src' directory), walk up prior to start
