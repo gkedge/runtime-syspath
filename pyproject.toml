@@ -1,16 +1,33 @@
 [tool.poetry]
-name = "src-into-sys-path"
+name = "runtime-syspath"
 version = "0.1.0"
-description = "Provide utility function to find each 'src' directory under working directory and add it to sys.path."
 authors = ["Greg Kedge <gregwork@kedges.com>"]
+description = "Function to find each 'src' directory under working directory and add it to sys.path."
+readme = "README.md"
+homepage = "https://github.com/gkedge/runtime-syspath"
+repository = "https://github.com/gkedge/runtime-syspath"
 license = "MIT"
+keywords = ["testing", "sys.path", "packaging", "dependency", "infer", "pyproject.toml"]
+
+classifiers = [
+        "Programming Language :: Python :: 3",
+        "Topic :: Software Development :: Testing",
+        "Topic :: Software Development :: Libraries",
+	    "Topic :: Utilities",
+        "Operating System :: OS Independent",
+        "Natural Language :: English",
+        "Intended Audience :: Developers",
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/gkedge/runtime-syspath/issues"
 
 [tool.poetry.dependencies]
-python = "^3.7"
-wheel = "tox-wheel"
+python = "^3.6"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.4.1"
+wheel = "tox-wheel"
 
 [build-system]
 requires = ["poetry>=0.12"]
