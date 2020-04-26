@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "runtime-syspath"
-version = "0.1.0"
+version = "0.1.3"
 authors = ["Greg Kedge <gregwork@kedges.com>"]
 description = "Function to find each 'src' directory under working directory and add it to sys.path."
 readme = "README.md"
@@ -8,6 +8,7 @@ homepage = "https://github.com/gkedge/runtime-syspath"
 repository = "https://github.com/gkedge/runtime-syspath"
 license = "MIT"
 keywords = ["testing", "sys.path", "packaging", "dependency", "infer", "pyproject.toml"]
+include = ["docs/"]
 
 classifiers = [
         "Programming Language :: Python :: 3",
