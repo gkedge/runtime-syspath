@@ -87,7 +87,7 @@ directory trees:
 |  └─ test_subproject
 |     └─ src
 │       └─ __init__.py
-|       └─ bar.py
+|       └─ unfoobarrator.py
 |     └─ tests
 └─ setup.py
 ```
