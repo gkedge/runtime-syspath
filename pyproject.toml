@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "runtime-syspath"
-version = "0.1.7"
+version = "0.1.8"
 authors = ["Greg Kedge <gregwork@kedges.com>"]
-description = "Function to find each 'src' directory under working directory and add it to sys.path."
+description = "Functions show and find each 'src' directory under working directory and add each to sys.path."
 readme = "README.md"
 homepage = "https://github.com/gkedge/runtime-syspath"
 repository = "https://github.com/gkedge/runtime-syspath"
