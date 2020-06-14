@@ -8,7 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/tests/test_subproject/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.7 (src-into-sys-path-JP7JUTmx-py3.7)" jdkType="Python SDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">

@@ -3,7 +3,8 @@ import re
 import sys
 
 from pathlib import Path
-from typing import Generator, Set, Pattern, List, Union
+from types import ModuleType
+from typing import Generator, Set, Pattern, List, Union, Optional, Tuple
 
 _STD_SYSPATH_FILTER: Union[None, Pattern] = None
 
@@ -99,3 +100,20 @@ def add_srcdirs_to_syspath() -> None:
     if len(diff_path_strs) > 0:
         diff_path_strs = {Path(diff_path_str).as_posix() for diff_path_str in diff_path_strs}
         print(f'Added to sys.path: {sorted(diff_path_strs)}')
+
+
+def get_package_and_max_relative_import_dots(module_name: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Derive the fully-qualified package related to already-imported module named by 'module_name'. In addition,
+    return the number of relative dots that can be used in that module before either of the following occur:
+
+    ValueError: attempted relative import beyond top-level package
+    ImportError: attempted relative import beyond top-level package
+
+    :param module_name: module name of already-imported module
+    :return: fully-qualified package and max relative dots.
+    """
+    target_module: ModuleType = sys.modules[module_name]
+    dots: str = '' if not target_module.__package__ else '.'
+    dots: str = dots + ''.join('.' for i in range(0, target_module.__package__.count('.')))
+    return target_module.__package__, dots
