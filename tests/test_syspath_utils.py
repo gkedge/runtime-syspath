@@ -8,9 +8,13 @@ import pytest
 
 from runtime_syspath import __version__, add_srcdirs_to_syspath, filtered_sorted_syspath, \
     print_syspath
+# pylint: disable=import-error,no-name-in-module
 from test_subproject import test_subproject_package_mod
 from test_subproject.test_subproject_subproject import test_subproject_subproject_package_mod
 import test_subproject_module
+
+
+# pylint: enable=import-error,no-name-in-module
 
 
 def test_version() -> None:
@@ -47,7 +51,7 @@ def test_add_srcdirs_to_syspath(root_path: Path) -> None:
 @pytest.mark.parametrize("path_filter", [None, r'test_subproject'])
 @pytest.mark.parametrize("sort", [True, False])
 @pytest.mark.parametrize("no_filtering", [True, False])
-def test_filtered_sorted_syspath(path_filter: str, no_filtering: bool, sort: bool):
+def test_filtered_sorted_syspath(path_filter: str, no_filtering: bool, sort: bool) -> None:
     """ Run print_sorted_syspath. """
     paths: List[str] = filtered_sorted_syspath(re.compile(path_filter) if path_filter else None,
                                                no_filtering=no_filtering, sort=sort)
@@ -58,14 +62,20 @@ def test_filtered_sorted_syspath(path_filter: str, no_filtering: bool, sort: boo
 @pytest.mark.parametrize("path_filter", [None, r'test_subproject'])
 @pytest.mark.parametrize("sort", [True, False])
 @pytest.mark.parametrize("no_filtering", [True, False])
-def test_print_syspath(path_filter: str, no_filtering: bool, sort: bool):
+def test_print_syspath(path_filter: str, no_filtering: bool, sort: bool) -> None:
     """ Run print_syspath. """
     print_syspath(re.compile(path_filter) if path_filter else None,
                   no_filtering=no_filtering, sort=sort)
 
 
-def test_get_max_dots_up_to_relative_import_in_this_module():
-    assert not test_subproject_module.FULLY_QUALIFIED_PACKAGE and not test_subproject_module.MAX_RELATIVE_IMPORT_DOTS
+def test_get_max_dots_up_to_relative_import_in_this_module() -> None:
+    """
+    Test get_max_dots_up_to_relative_import_in_this_module.
+
+    :return:
+    """
+    assert not test_subproject_module.FULLY_QUALIFIED_PACKAGE and \
+           not test_subproject_module.MAX_RELATIVE_IMPORT_DOTS
 
     package = test_subproject_package_mod.FULLY_QUALIFIED_PACKAGE
     dots = test_subproject_package_mod.MAX_RELATIVE_IMPORT_DOTS
@@ -75,5 +85,6 @@ def test_get_max_dots_up_to_relative_import_in_this_module():
     dots = test_subproject_subproject_package_mod.MAX_RELATIVE_IMPORT_DOTS
     assert package == 'test_subproject.test_subproject_subproject' and dots == '..'
 
-    package, dots = test_subproject_subproject_package_mod.number_of_dots_up_to_relatively_import_on_import()
+    package, dots = \
+        test_subproject_subproject_package_mod.number_of_dots_up_to_relatively_import_on_import()
     assert package == 'test_subproject' and dots == '.'
