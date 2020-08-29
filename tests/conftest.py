@@ -15,22 +15,22 @@ def get_root_path() -> Path:
     directory when initiating tests against modules under 'root/src'.
     :return: root path
     """
-    # pylint: disable=redefined-outer-name
     root_path: Path = Path.cwd()
-    while not (root_path / 'src').exists() or not (root_path / 'src').is_dir():
-        print(f'Root path: {root_path}')
+    while not (root_path / "src").exists() or not (root_path / "src").is_dir():
+        print(f"Root path: {root_path}")
         if not root_path.parent:
-            raise RuntimeError(f"{Path.cwd().as_posix()} and any parents of that path contain a "
-                               f"'src' directory.")
+            raise RuntimeError(
+                f"{Path.cwd().as_posix()} and any parents of that path contain a 'src' directory."
+            )
         root_path = root_path.parent
     return root_path
 
 
-sys.path.append(str(get_root_path() / 'src'))
+sys.path.append(str(get_root_path() / "src"))
 
 
-@pytest.fixture
-def root_path() -> Path:
+@pytest.fixture(name="root_path")
+def root_path_fixture() -> Path:
     """
     Fixtures can't be called directly so get_root_path() can't be a fixture.  Just a wrapper.
     :return:

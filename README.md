@@ -94,8 +94,8 @@ directory trees:
 
 > :exclamation: Due to the code maintenance and grok'ing mayhem caused
 > by indiscriminate runtime additions to `sys.path`, your goal should be
-> to limit this anti-pattern to this discovery-of-source being
-> tested aspect of import discovery.
+> to limit that anti-pattern to this discovery-of-source aspect for  
+> import discovery.
 
 > :bulb: Since programmatically adding to a `sys.path` impairs an IDE's
 > ability to do static import discovery and leveraging IDE refactoring
