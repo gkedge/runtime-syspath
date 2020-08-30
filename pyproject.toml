@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "runtime-syspath"
-version = "0.1.16"
+version = "0.1.35"
 authors = ["Greg Kedge <gregwork@kedges.com>"]
 description = "Functions show and find each 'src' directory under working directory and add each to sys.path."
 readme = "README.md"
@@ -8,7 +8,7 @@ homepage = "https://github.com/gkedge/runtime-syspath"
 repository = "https://github.com/gkedge/runtime-syspath"
 license = "MIT"
 keywords = ["testing", "sys.path", "packaging", "dependency", "infer", "pyproject.toml"]
-include = ["docs/**/*"]
+include = ["docs/**/*", "src/runtime_syspath/py.typed"]
 
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -23,27 +23,32 @@ classifiers = [
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/gkedge/runtime-syspath/issues"
 
+[tool.poetry.build]
+generate-setup-file = false
+
 [tool.poetry.dependencies]
-python = "~3.6"
+python = "^3.6"
 
 [tool.poetry.dev-dependencies]
-pytest = "~5.4.1"
+pytest = "~5.*"
 wheel = "tox-wheel"
-isort = "~5.4.2"
-black = "~20.8b1"
-pylint = "~2.6.0"
+isort = "~5.*"
+black = "~20.*"
+pylint = "~2.*"
 
 [tool.isort]
 profile = "black"
 line_length = 100
 #honor-noqa = "true"
 #remove-redundant-aliases = "true"
-combine_as_imports = "True"
+#combine_as_imports = "true"
+skip_gitignore = "true"
 
 [black]
 line-length = 100
 target-version = ["py37|py38"]
+exclude = '(\.idea|\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|\.svn|_build|buck-out|build|dist)'
 
 [build-system]
-requires = ["poetry>=0.12"]
+requires = ["poetry>=1.1.0b2"]
 build-backend = "poetry.masonry.api"

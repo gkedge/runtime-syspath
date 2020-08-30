@@ -5,10 +5,12 @@ from pathlib import Path
 from typing import List
 
 import pytest
-import test_subproject_module
-from test_subproject import test_subproject_package_mod
-from test_subproject.test_subproject_subproject import test_subproject_subproject_package_mod
 
+import test_subproject_module
+from test_subproject_package import test_subproject_package_mod
+from test_subproject_package.test_subproject_subproject import (
+    test_subproject_subproject_package_mod,
+)
 from runtime_syspath import (
     __version__,
     add_srcdirs_to_syspath,
@@ -21,7 +23,7 @@ def test_version() -> None:
     """
     Test version string in runtime_syspath.__init__.py
     """
-    assert __version__ == "0.1.16"
+    assert __version__ == "0.1.35"
 
 
 def test_add_srcdirs_to_syspath(root_path: Path) -> None:
@@ -89,11 +91,13 @@ def test_get_max_dots_up_to_relative_import_in_this_module() -> None:
 
     package = test_subproject_package_mod.FULLY_QUALIFIED_PACKAGE
     dots = test_subproject_package_mod.MAX_RELATIVE_IMPORT_DOTS
-    assert package == "test_subproject" and dots == "."
+    assert package == "test_subproject_package" and dots == "."
 
     package = test_subproject_subproject_package_mod.FULLY_QUALIFIED_PACKAGE
     dots = test_subproject_subproject_package_mod.MAX_RELATIVE_IMPORT_DOTS
-    assert package == "test_subproject.test_subproject_subproject" and dots == ".."
+    assert (
+        package == "test_subproject_package.test_subproject_subproject" and dots == ".."
+    )
 
     (
         package,
@@ -101,4 +105,4 @@ def test_get_max_dots_up_to_relative_import_in_this_module() -> None:
     ) = (
         test_subproject_subproject_package_mod.number_of_dots_up_to_relatively_import_on_import()
     )
-    assert package == "test_subproject" and dots == "."
+    assert package == "test_subproject_package" and dots == "."

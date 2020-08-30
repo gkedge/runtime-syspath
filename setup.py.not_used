@@ -1,0 +1,26 @@
+# -*- coding: utf-8 -*-
+from setuptools import setup
+
+package_dir = {"runtime_syspath": "src"}
+
+packages = ["runtime_syspath"]
+
+package_data = {"runtime_syspath": ["py.typed"]}
+
+setup_kwargs = {
+    "name": "runtime-syspath",
+    "version": "0.1.35",
+    "description": "Functions show and find each 'src' directory under working directory and add each to sys.path.",
+    "long_description": "`runtime-syspath` is a package to ease programmatically adding paths to\n`sys.path`. This is targeted at python test code that needs to discover\na project's solution source to test.\n\n> :exclamation: It is generally **frowned upon** to alter the `sys.path`\n> programmatically as it confuses development, especially refactoring.\n> Python IDEs can statically determine if a missing import needs to be\n> loaded from PyPi. That static *missing import* detection registers\n> false-negatives if the import is discovered via dynamic (programmatic)\n> alterations of `sys.path` at runtime.\n\n*The following description assumes the use of `pytest` unit testing\nsupport and a project file structuring that includes project root\ndirectories named `src` (project solution) and `tests` (project tests of\nproject source under `src`. The `src` directory is-a package (contains\n`__init__py`) whereas `tests`, for simple 1-package project testing,\ntend to be flat and `pytest`'s\n[default test discovery](https://docs.pytest.org/en/latest/goodpractices.html#test-discovery)\nnegates the need for `tests` being a package (doesn't contain\n`__init__.py`):*\n\n```\n├─ src\n│  └─ __init__.py\n|  └─ foo.py\n├─ tests\n│  └─ test_foo.py\n└─ setup.py\n```\n*That structure is based upon\n[this guidance](https://blog.ionelmc.ro/2014/05/25/python-packaging/#the-structure).\nSee considerations for alternate directory structures below.*\n\nWhen testing solution source in a project, the test cases can statically\naccess the solution source by importing with the `src` package prefix:\n\n```\nimport src.packagename.foo\n```\nNot only does that not feel right at all, that solution implies that\ntests are run **only** from the project root, not within the `tests`\ndirectory itself. If the test is run within the `tests` directory, the\n`src` package won't be found at runtime.\n\nSo, using:\n```\nimport packagename.foo\n```\n... the `src` directory would need to be programmatically added to the\n`sys.path`. This will allow for tests to be run wherever the test module\nis under the `tests` sub-tree. `runtime_syspath` will discover all `src`\ndirectories under `<project root>/src`. The reason that there may be\nmore is if your project is using `git subprojects` under `<project\nroot>/src` that have their own `src` directories. Those need to be added\nto `sys.path` also.\n\nTo leverage `runtime-syspath` to add the `src` directory everytime a\ntest is run, import and run `add_srcdirs_to_syspath` in\n`tests/conftest.py`. (If `tests` contain more `conftest.py` under its\ndirectory tree, the call still only need appear in the root\n`test/conftest.py`!):\n ```\n from runtime_syspath import add_srcdirs_to_syspath\n \n add_srcdirs_to_syspath() \n ```\n\n`add_srcdirs_to_syspath()` will recursively discover **all** `src`\nsubdirectories under the <project root>. For projects that use `git\nsubmodules`, their `src` directories need to be added to `src.path` for\nimport access. `git subprojects` could be added to `src` or `tests`\ndirectory trees:\n\n```\n├─ src\n│  └─ __init__.py\n|  └─ projectpackage\n│     └─ __init__.py\n|     └─ foo.py\n|  └─ subproject\n|     └─ src\n│       └─ __init__.py\n|       └─ bar.py\n|     └─ tests\n├─ tests\n│  └─ test_foo.py\n|  └─ test_subproject\n|     └─ src\n│       └─ __init__.py\n|       └─ unfoobarrator.py\n|     └─ tests\n└─ setup.py\n```\n\n> :exclamation: Due to the code maintenance and grok'ing mayhem caused\n> by indiscriminate runtime additions to `sys.path`, your goal should be\n> to limit that anti-pattern to this discovery-of-source aspect for  \n> import discovery.\n\n> :bulb: Since programmatically adding to a `sys.path` impairs an IDE's\n> ability to do static import discovery and leveraging IDE refactoring\n> features between the solution source and the test code, an IDE user\n> would need to manually mark all `src` directories as such.  \n> PyCharm example:\n>\n> ![image](docs/images/IDE_SetSrc.png)\n",
+    "author": "Greg Kedge",
+    "author_email": "gregwork@kedges.com",
+    "maintainer": None,
+    "maintainer_email": None,
+    "url": "https://github.com/gkedge/runtime-syspath",
+    "package_dir": package_dir,
+    "packages": packages,
+    "package_data": package_data,
+    "python_requires": ">=3.6,<4.0",
+}
+
+setup(**setup_kwargs)
