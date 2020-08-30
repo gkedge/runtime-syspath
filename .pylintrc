@@ -2,7 +2,7 @@
 init-hook = 'from pylint.config import find_pylintrc; from pathlib import Path; import sys;
             project_dir = Path(find_pylintrc()).parent;
             sys.path.append(Path(project_dir, "src"));
-            sys.path.append(Path(project_dir, "tests/test_subproject/src"))'
+            sys.path.append(Path(project_dir, "tests/test_subproject/src"));
             sys.path.append(Path(project_dir, "tests/test_subproject/test_subproject_subproject"))'
 
 ignore = build,dist
