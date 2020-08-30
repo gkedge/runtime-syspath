@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "runtime-syspath"
-version = "0.1.14"
+version = "0.1.16"
 authors = ["Greg Kedge <gregwork@kedges.com>"]
 description = "Functions show and find each 'src' directory under working directory and add each to sys.path."
 readme = "README.md"
@@ -24,14 +24,14 @@ classifiers = [
 "Bug Tracker" = "https://github.com/gkedge/runtime-syspath/issues"
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "~3.6"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.4.1"
+pytest = "~5.4.1"
 wheel = "tox-wheel"
-isort = "^5.4.2"
-black = "^20.8b1"
-pylint = "^2.6.0"
+isort = "~5.4.2"
+black = "~20.8b1"
+pylint = "~2.6.0"
 
 [tool.isort]
 profile = "black"

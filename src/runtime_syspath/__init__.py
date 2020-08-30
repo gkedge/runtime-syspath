@@ -9,6 +9,6 @@ from .syspath_utils import (
     print_syspath,
 )
 
-__version__ = "0.1.14"
+__version__ = "0.1.16"
 
 init_std_syspath_filter(re.compile(r"([Jj]et[Bb]rains|[Pp]ython|PyCharm|v\w*env)"))

@@ -1,5 +1,5 @@
 """
-Not ready for prime time...
+Check subproject import
 """
 from runtime_syspath import get_package_and_max_relative_import_dots
 

@@ -5,12 +5,10 @@ from pathlib import Path
 from typing import List
 
 import pytest
-
 import test_subproject_module
 from test_subproject import test_subproject_package_mod
-from test_subproject.test_subproject_subproject import (
-    test_subproject_subproject_package_mod,
-)
+from test_subproject.test_subproject_subproject import test_subproject_subproject_package_mod
+
 from runtime_syspath import (
     __version__,
     add_srcdirs_to_syspath,
@@ -23,7 +21,7 @@ def test_version() -> None:
     """
     Test version string in runtime_syspath.__init__.py
     """
-    assert __version__ == "0.1.14"
+    assert __version__ == "0.1.16"
 
 
 def test_add_srcdirs_to_syspath(root_path: Path) -> None:
