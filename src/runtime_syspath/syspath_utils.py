@@ -101,9 +101,7 @@ def add_srcdirs_to_syspath() -> None:
 
     diff_path_strs: Set[str] = set(prior_sys_path).symmetric_difference(set(sys.path))
     if len(diff_path_strs) > 0:
-        diff_path_strs = {
-            Path(diff_path_str).as_posix() for diff_path_str in diff_path_strs
-        }
+        diff_path_strs = {Path(diff_path_str).as_posix() for diff_path_str in diff_path_strs}
         print(f"Added to sys.path: {sorted(diff_path_strs)}")
 
 
@@ -123,7 +121,5 @@ def get_package_and_max_relative_import_dots(
     """
     target_module: ModuleType = sys.modules[module_name]
     dots: str = "" if not target_module.__package__ else "."
-    dots: str = dots + "".join(
-        "." for i in range(0, target_module.__package__.count("."))
-    )
+    dots: str = dots + "".join("." for i in range(0, target_module.__package__.count(".")))
     return target_module.__package__, dots

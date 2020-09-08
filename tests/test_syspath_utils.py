@@ -53,9 +53,7 @@ def test_add_srcdirs_to_syspath(root_path: Path) -> None:
 @pytest.mark.parametrize("path_filter", [None, r"test_subproject"])
 @pytest.mark.parametrize("sort", [True, False])
 @pytest.mark.parametrize("no_filtering", [True, False])
-def test_filtered_sorted_syspath(
-    path_filter: str, no_filtering: bool, sort: bool
-) -> None:
+def test_filtered_sorted_syspath(path_filter: str, no_filtering: bool, sort: bool) -> None:
     """ Run print_sorted_syspath. """
     paths: List[str] = filtered_sorted_syspath(
         re.compile(path_filter) if path_filter else None,
@@ -95,14 +93,10 @@ def test_get_max_dots_up_to_relative_import_in_this_module() -> None:
 
     package = test_subproject_subproject_package_mod.FULLY_QUALIFIED_PACKAGE
     dots = test_subproject_subproject_package_mod.MAX_RELATIVE_IMPORT_DOTS
-    assert (
-        package == "test_subproject_package.test_subproject_subproject" and dots == ".."
-    )
+    assert package == "test_subproject_package.test_subproject_subproject" and dots == ".."
 
     (
         package,
         dots,
-    ) = (
-        test_subproject_subproject_package_mod.number_of_dots_up_to_relatively_import_on_import()
-    )
+    ) = test_subproject_subproject_package_mod.number_of_dots_up_to_relatively_import_on_import()
     assert package == "test_subproject_package" and dots == "."
