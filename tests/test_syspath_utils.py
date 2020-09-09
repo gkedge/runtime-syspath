@@ -37,6 +37,7 @@ def test_add_srcdirs_to_syspath(root_path: Path) -> None:
     src_path_str: str = str(src_path)
     sys_paths: List[str] = list()
     found_src_path: bool = False
+    syspath_member: str
     for syspath_member in sys.path:
         sys_paths.append(syspath_member)
         if src_path_str == syspath_member:
@@ -45,6 +46,7 @@ def test_add_srcdirs_to_syspath(root_path: Path) -> None:
 
     if not found_src_path:
         msg: str = f"{src_path.as_posix()} is not in:"
+        syspath_mem: str
         for syspath_mem in sorted(sys_paths):
             msg += f"\n\t{Path(syspath_mem).as_posix()}"
         pytest.fail(msg)

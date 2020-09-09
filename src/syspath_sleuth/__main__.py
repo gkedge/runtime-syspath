@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 __version__ = "2019.04.06.001"
 
-from _typeshed import OpenTextMode
 import os
-from pathlib import Path
 import subprocess as sp
 import sys
+from pathlib import Path
+
+from _typeshed import OpenTextMode
 
 
 class InstallError(RuntimeError):

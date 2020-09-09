@@ -27,6 +27,7 @@ def get_root_path() -> Path:
 
 
 sys.path.append(str(get_root_path() / "src"))
+sys.path.append(str(get_root_path() / "tests" / "test_subproject" / "src"))
 
 
 @pytest.fixture(name="root_path")

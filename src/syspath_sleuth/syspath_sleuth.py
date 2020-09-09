@@ -1,9 +1,8 @@
+import inspect
 import logging
-from pathlib import PurePath, Path
 import site
 import sys
-
-import inspect
+from pathlib import Path, PurePath
 from types import FrameType
 from typing import Optional
 
@@ -73,6 +72,7 @@ class SysPathSleuth(list):
     def _is_logging_on(cls):
         is_logging_on = cls.logger.getEffectiveLevel() != logging.NOTSET
         if is_logging_on:
+            handler: logging.Handler
             for handler in cls.logger.handlers:
                 if handler.level != logging.NOTSET:
                     break
@@ -122,8 +122,9 @@ class SysPathSleuth(list):
         # site packages directories.
         if sleuth_module_file_name == "sitecustomize.py":
             site_customize_module_name = PurePath("sitecustomize.py")
-            for site_package in site.getsitepackages():
-                site_package_path: Path = Path(site_package)
+            site_package_dir: str
+            for site_package_dir in site.getsitepackages():
+                site_package_path: Path = Path(site_package_dir)
                 if not site_package_path.is_dir():
                     continue
                 sleuth_system_path = site_package_path / site_customize_module_name

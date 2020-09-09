@@ -1,6 +1,7 @@
 """ add_srcdirs_to_syspath module. """
 import re
 import sys
+from itertools import chain
 from pathlib import Path
 from types import ModuleType
 from typing import Generator, List, Optional, Pattern, Set, Tuple, Union
@@ -34,10 +35,11 @@ def filtered_sorted_syspath(
     """
     paths: List[str] = sys.path
     if not no_filtering:
+        path: str
         if _STD_SYSPATH_FILTER:
-            paths = [p for p in paths if not re.search(_STD_SYSPATH_FILTER, p)]
+            paths = [path for path in paths if not re.search(_STD_SYSPATH_FILTER, path)]
         if path_filter:
-            paths = [p for p in paths if not re.search(path_filter, p)]
+            paths = [path for path in paths if not re.search(path_filter, path)]
 
     return sorted(paths, reverse=True) if sort else paths
 
@@ -54,6 +56,7 @@ def print_syspath(
     """
     paths: List[str] = filtered_sorted_syspath(path_filter, no_filtering, sort)
     print(f"\nsys.path({len(paths)} paths):")
+    path: str
     for path in paths:
         print(f"\t{path}")
 
@@ -67,8 +70,8 @@ def add_srcdirs_to_syspath() -> None:
 
     Searching for 'src' directories is NOT limited to finding the '<project root>/src' (and 'src'
     directories under that '<project root>/src' directory)! All those will be found and added,
-    but also any other 'src' directory found under the <project root> tree. This is desired since
-    git subprojects may be anywhere (under `tests`) and their 'src' directories need to be
+    but also any other 'src' directory found under the <project root>/tests tree. This is desired
+    since git subprojects may be under 'tests' and their 'src' directories need to be
     included.
 
     :return: None
@@ -88,13 +91,11 @@ def add_srcdirs_to_syspath() -> None:
 
     prior_sys_path = sys.path.copy()
 
-    # rglob() is NOT limited to finding the <project root>/src and 'src' under that directory!
-    # It will find all that, but also any other 'src' under and subdirectory level from the
-    # <project root>.  This is desired since git subprojects may be anywhere (under `tests`) and
-    # their 'src' directories need to be included.
-    all_projects_src_dirs: Generator[Path, None, None] = root_path.rglob("src")
-    for tested_src in all_projects_src_dirs:
-        tested_src: Path = tested_src
+    all_src_dirs: Generator[Path, None, None] = root_path.glob("src")
+    all_test_src_dirs: Generator[Path, None, None] = root_path.glob("tests/**/src")
+
+    tested_src: Path
+    for tested_src in chain.from_iterable([all_src_dirs, all_test_src_dirs]):
         testes_src_str = str(tested_src)
         if tested_src.is_dir() and testes_src_str not in sys.path:
             sys.path.append(testes_src_str)
@@ -121,5 +122,6 @@ def get_package_and_max_relative_import_dots(
     """
     target_module: ModuleType = sys.modules[module_name]
     dots: str = "" if not target_module.__package__ else "."
-    dots: str = dots + "".join("." for i in range(0, target_module.__package__.count(".")))
+    dot_count: int = target_module.__package__.count(".") if target_module.__package__ else 0
+    dots: str = dots + "".join("." for i in range(0, dot_count))
     return target_module.__package__, dots
