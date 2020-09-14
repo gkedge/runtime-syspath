@@ -1,34 +1,20 @@
 #!/usr/bin/env python3
 __version__ = "2019.04.06.001"
 
+import logging
 import os
+import site
 import subprocess as sp
 import sys
 from pathlib import Path
 
 from _typeshed import OpenTextMode
+from typing import Optional, Sequence
+
+from syspath_sleuth import parse_syspath_sleuth_args, inject_sleuth_into_user_site, \
+    inject_sleuth_into_system_site
 
 
-class InstallError(RuntimeError):
-    pass
-
-
-def parse_args():
-    """Parse command line arguments, return argparse namespace."""
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="""\
-Install a special version of the python command in a new directory.\
-"""
-    )
-    parser.add_argument(
-        "basedir",
-        metavar="DIR",
-        help="""base directory containing the new bin/python command.\
-        This directory must not initially exist.""",
-    )
-    return parser.parse_args()
 
 
 def check_basedir_doesnt_exist(basedir):
@@ -57,8 +43,13 @@ def check_is_below_basedir(dir, basedir):
         raise InstallError("Expected directory not below basedir", str(dir), str(basedir)) from exc
 
 
-def main():
-    args = parse_args()
+def main(args: Optional[Sequence[str]] = None):
+
+    if site.ENABLE_USER_SITE and site.check_enableusersite():
+        inject_sleuth_into_user_site()
+    else:
+        inject_sleuth_into_system_site()
+
     basedir = Path(args.basedir)
     check_basedir_doesnt_exist(basedir)
     create_directory(basedir)
@@ -107,4 +98,4 @@ os.environ['PYTHONUSERBASE'] = os.path.dirname(os.path.dirname(__file__))
 os.execv(sys.executable, [sys.executable] + sys.argv[1:])
 """
 
-main()
+main(sys.argv)

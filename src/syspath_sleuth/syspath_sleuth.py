@@ -103,7 +103,12 @@ class SysPathSleuth(list):
         is_active_in_user_site = False
         # Determine if user site is available and enabled. If so, report if the
         # sleuth_module_file_name is the usercustomize.py module within the user site.
-        if site.check_enableusersite() and site.ENABLE_USER_SITE:
+        #
+        # When using venv, site.ENABLE_USER_SITE is False. When using virtual environments,
+        # the effort is to isolate the impact activities within one virtual environment on a
+        # system Python or other virtual environments. Where the user site enabled, it would
+        # affect other Python environments.
+        if site.ENABLE_USER_SITE and site.check_enableusersite():
             if sleuth_module_file_name == "usercustomize.py":
                 user_customize_module_name = PurePath(sleuth_module_file_name)
                 sleuth_user_path = Path(site.getusersitepackages()) / user_customize_module_name
