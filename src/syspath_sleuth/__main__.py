@@ -11,10 +11,11 @@ from pathlib import Path
 from _typeshed import OpenTextMode
 from typing import Optional, Sequence
 
-from syspath_sleuth import parse_syspath_sleuth_args, inject_sleuth_into_user_site, \
-    inject_sleuth_into_system_site
-
-
+from syspath_sleuth import (
+    parse_syspath_sleuth_args,
+    inject_sleuth_into_user_site,
+    inject_sleuth_into_system_site,
+)
 
 
 def check_basedir_doesnt_exist(basedir):

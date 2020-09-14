@@ -15,20 +15,26 @@ class InstallError(RuntimeError):
     pass
 
 
-def parse_syspath_sleuth_args(args: Optional[Sequence[str]] = None, parser: argparse.ArgumentParser = None):
+def parse_syspath_sleuth_args(
+    args: Optional[Sequence[str]] = None, parser: argparse.ArgumentParser = None
+):
     """Parse command line arguments, return argparse namespace."""
     if not parser:
         parser = argparse.ArgumentParser(
-        description="(Un)Install SysPathSleuth into user-site or system-site to track sys.path "
-                    "access in real-time."
-    )
+            description="(Un)Install SysPathSleuth into user-site or system-site to track sys.path "
+            "access in real-time."
+        )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        '-i', '--install', action='store_true',
+        "-i",
+        "--install",
+        action="store_true",
         help="Install SysPathSleuth to user-site if available, else system-site",
     )
     group.add_argument(
-        '-u', '--uninstall', action='store_true',
+        "-u",
+        "--uninstall",
+        action="store_true",
         help="Uninstall SysPathSleuth from both user-site and/or system-site",
     )
     return parser.parse_args(args)
@@ -49,16 +55,12 @@ def inject_sleuth_into_user_site():
 
 
 def append_sleuth_to_usercustomize(user_customize_path: Path):
-    sleuth_message = (
-        f"Appending SysPathSleuth to user site customize: {user_customize_path}"
-    )
+    sleuth_message = f"Appending SysPathSleuth to user site customize: {user_customize_path}"
     logger.info(sleuth_message)
 
 
 def append_sleuth_to_customize(system_customize_path):
-    sleuth_message = (
-        f"Appending SysPathSleuth to system site customize: {system_customize_path}"
-    )
+    sleuth_message = f"Appending SysPathSleuth to system site customize: {system_customize_path}"
     logger.info(sleuth_message)
 
 
@@ -98,4 +100,3 @@ def main(args: Optional[Sequence[str]] = None):
         remove_sleuth_into_system_site()
     else:
         raise InstallError("Not install or uninstall? Confused")
-
