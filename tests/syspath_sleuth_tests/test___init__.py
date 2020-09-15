@@ -2,7 +2,7 @@ import argparse
 import inspect
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from _pytest.capture import CaptureResult
 import pytest
@@ -47,7 +47,8 @@ def test_parse_args_help(capsys):
         result: CaptureResult = capsys.readouterr()
         assert "usage:" in result.out and "(-i | -u)" in result.out
         assert (
-                "-i, --install    Install SysPathSleuth to user-site if available, else" in result.out
+                "-i, --install    Install SysPathSleuth to user-site if available, else" in
+                result.out
         )
         assert (
                 "-u, --uninstall  Uninstall SysPathSleuth from both user-site and/or system-"
@@ -73,7 +74,8 @@ def test_parse_args_bad(capsys):
         result: CaptureResult = capsys.readouterr()
         assert "usage:" in result.err and "(-i | -u)" in result.err
         assert (
-                "error: argument -u/--uninstall: not allowed with argument -i/--install" in result.err
+                "error: argument -u/--uninstall: not allowed with argument -i/--install" in
+                result.err
         )
 
 
@@ -88,7 +90,7 @@ def test_append_sleuth_to_customize(request, caplog):
     site_customize_path = Path('yow')
 
     def fin():
-        if site_customize_path.exists:
+        if site_customize_path.exists():
             site_customize_path.unlink()
     request.addfinalizer(finalizer=fin)
 

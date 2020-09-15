@@ -8,6 +8,7 @@ import site
 from typing import Optional, Sequence, List, Iterator
 
 from . import syspath_sleuth
+from .syspath_sleuth import SysPathSleuth
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ def append_sleuth_to_customize(system_customize_path):
 
 
 def create_site_customize(system_customize_path: Path):
-    logger.info(f"Creating system site {system_customize_path.name}")
+    logger.info("Creating system site %s", system_customize_path.name)
     system_customize_path.touch()
 
 
