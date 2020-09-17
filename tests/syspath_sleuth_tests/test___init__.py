@@ -1,12 +1,10 @@
 import argparse
 import inspect
 import logging
-import os
 from pathlib import Path
 from typing import List
 
 from _pytest.capture import CaptureResult
-from diff_match_patch import diff_match_patch
 import pytest
 
 import syspath_sleuth
@@ -190,36 +188,20 @@ def test_create_reverse_sleuth_patch(request):
         reverse_patch_path.unlink()
 
     syspath_sleuth.create_site_customize(customize_path)
+    assert customize_path.exists()
+
     syspath_sleuth.copy_site_customize(customize_path)
+    copied_customize_path.exists()
+
     syspath_sleuth.append_sleuth_to_customize(customize_path)
+    assert customize_path.exists() and customize_path.stat().st_size > 0
+
     syspath_sleuth.create_reverse_sleuth_patch(customize_path)
-
-    assert reverse_patch_path.exists()
-
-    with reverse_patch_path.open() as customize_patch_f:
-        patch = customize_patch_f.read()
-
-    with customize_path.open() as customize_patch_f:
-        customize = customize_patch_f.read()
-
-    dmp = diff_match_patch()
-    patches: List[str] = dmp.patch_fromText(patch)
-    patched_customize: str
-    patch_results: List[bool]
-    patched_customize, patch_results = dmp.patch_apply(patches, customize)
-
-    for patch_result in patch_results:
-        assert patch_result
-
-    assert not patched_customize
-
-    with customize_path.open("w") as customize_patch_f:
-        customize_patch_f.write(patched_customize)
-
+    assert not copied_customize_path.exists()
     assert reverse_patch_path.exists()
 
 
-def test_reverse_existing_sleuth(request, caplog):
+def test_reverse_patch_sleuth(request, caplog):
     caplog.set_level(logging.INFO)
     customize_path = Path("yow")
     copied_customize_path = customize_path.with_suffix(syspath_sleuth.PRE_SLEUTH_SUFFIX)
@@ -254,10 +236,11 @@ def test_reverse_existing_sleuth(request, caplog):
     assert not copied_customize_path.exists()
     assert reverse_patch_path.exists()
 
-    syspath_sleuth.reverse_existing_sleuth(customize_path)
+    syspath_sleuth.reverse_patch_sleuth(customize_path)
 
     assert not reverse_patch_path.exists()
     assert customize_path.exists() and customize_path.stat().st_size == 0
+
     record: logging.LogRecord
     for record in caplog.get_records("call"):
         if f"Removing {SysPathSleuth.__name__} from site customize: yow" in record.message:

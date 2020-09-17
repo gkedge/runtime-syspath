@@ -93,35 +93,36 @@ def create_reverse_sleuth_patch(customize_path):
         pre_sleuth_customize_path.unlink()
 
 
-def reverse_existing_sleuth(customize_path):
-    logger.info("Removing %s from site customize: %s", SysPathSleuth.__name__, customize_path)
+def reverse_patch_sleuth(customize_path):
     reverse_patch_path = customize_path.with_suffix(REVERSE_PATCH_SUFFIX)
-    if reverse_patch_path.exists():
-        with reverse_patch_path.open() as customize_patch_f:
-            patch = customize_patch_f.read()
+    if not reverse_patch_path.exists():
+        return
+    logger.info("Removing %s from site customize: %s", SysPathSleuth.__name__, customize_path)
+    with reverse_patch_path.open() as customize_patch_f:
+        patch = customize_patch_f.read()
 
-            dmp = diff_match_patch()
-            patches: List[str] = dmp.patch_fromText(patch)
+        dmp = diff_match_patch()
+        patches: List[str] = dmp.patch_fromText(patch)
 
-        patched_customize: str
-        patch_results: List[bool]
-        with customize_path.open("r") as customize_patch_f:
-            customize = customize_patch_f.read()
-            patched_customize, patch_results = dmp.patch_apply(patches, customize)
+    patched_customize: str
+    patch_results: List[bool]
+    with customize_path.open("r") as customize_patch_f:
+        customize = customize_patch_f.read()
+        patched_customize, patch_results = dmp.patch_apply(patches, customize)
 
-            for patch_result in patch_results:
-                if not patch_result:
-                    raise UninstallError(
-                        f"Reverse patch failed; patch file: "
-                        f"{reverse_patch_path}.\n"
-                        f"Hand edit removal of {SysPathSleuth.__name__}"
-                    )
+        for patch_result in patch_results:
+            if not patch_result:
+                raise UninstallError(
+                    f"Reverse patch failed; patch file: "
+                    f"{reverse_patch_path}.\n"
+                    f"Hand edit removal of {SysPathSleuth.__name__}"
+                )
 
-            with customize_path.open("w") as customize_patch_f:
-                customize_patch_f.seek(0)
-                customize_patch_f.write(patched_customize)
+        with customize_path.open("w") as customize_patch_f:
+            customize_patch_f.seek(0)
+            customize_patch_f.write(patched_customize)
 
-        reverse_patch_path.unlink()
+    reverse_patch_path.unlink()
 
 
 def get_user_customize_path():
@@ -136,14 +137,6 @@ def get_system_customize_path() -> Path:
     raise InstallError("No system site found!")
 
 
-def remove_sleuth_into_user_site():
-    pass
-
-
-def remove_sleuth_into_system_site():
-    pass
-
-
 def inject_sleuth():
     if site.ENABLE_USER_SITE and site.check_enableusersite():
         customize_path = get_user_customize_path()
@@ -154,7 +147,7 @@ def inject_sleuth():
     if customize_path and not customize_path.exists():
         create_site_customize(customize_path)
     else:
-        reverse_existing_sleuth(customize_path)
+        reverse_patch_sleuth(customize_path)
     copy_site_customize(customize_path)
     append_sleuth_to_customize(customize_path)
     create_reverse_sleuth_patch(customize_path)
@@ -162,8 +155,12 @@ def inject_sleuth():
 
 def uninstall_sleuth():
     if site.ENABLE_USER_SITE and site.check_enableusersite():
-        remove_sleuth_into_user_site()
-    remove_sleuth_into_system_site()
+        customize_path = get_user_customize_path()
+        customize_path.parent.mkdir(parents=True)
+    else:
+        customize_path = get_system_customize_path()
+
+    reverse_patch_sleuth(customize_path)
 
 
 def main(args: Optional[Sequence[str]] = None):
