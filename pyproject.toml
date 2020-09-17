@@ -28,6 +28,7 @@ generate-setup-file = false
 
 [tool.poetry.dependencies]
 python = "^3.7"
+diff-match-patch = "^20200713"
 
 [tool.poetry.dev-dependencies]
 black = { version = "^20.8b1", extras = ["d"] }
