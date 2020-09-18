@@ -96,11 +96,8 @@ def test_create_site_customize(request, caplog):
     def fin():
         if test_path.exists():
             test_path.unlink()
-
-    if test_path.exists():
-        test_path.unlink()
-
     request.addfinalizer(finalizer=fin)
+    fin()  # run ahead in case failed tests left junk
 
     syspath_sleuth.create_site_customize(test_path)
 
@@ -124,10 +121,7 @@ def test_copy_site_customize(request):
             copied_file_path.unlink()
 
     request.addfinalizer(finalizer=fin)
-    if test_path.exists():
-        test_path.unlink()
-    if copied_file_path.exists():
-        copied_file_path.unlink()
+    fin()  # run ahead in case failed tests left junk
 
     syspath_sleuth.create_site_customize(test_path)
     syspath_sleuth.copy_site_customize(test_path)
@@ -144,8 +138,7 @@ def test_append_sleuth_to_customize(request, caplog):
             customize_path.unlink()
 
     request.addfinalizer(finalizer=fin)
-    if customize_path.exists():
-        customize_path.unlink()
+    fin()  # run ahead in case failed tests left junk
 
     syspath_sleuth.create_site_customize(customize_path)
     syspath_sleuth.append_sleuth_to_customize(customize_path)
@@ -181,12 +174,7 @@ def test_create_reverse_sleuth_patch(request):
             reverse_patch_path.unlink()
 
     request.addfinalizer(finalizer=fin)
-    if customize_path.exists():
-        customize_path.unlink()
-    if copied_customize_path.exists():
-        copied_customize_path.unlink()
-    if reverse_patch_path.exists():
-        reverse_patch_path.unlink()
+    fin()  # run ahead in case failed tests left junk
 
     syspath_sleuth.create_site_customize(customize_path)
     assert customize_path.exists()
@@ -217,12 +205,7 @@ def test_reverse_patch_sleuth(request, caplog):
             reverse_patch_path.unlink()
 
     request.addfinalizer(finalizer=fin)
-    if customize_path.exists():
-        customize_path.unlink()
-    if copied_customize_path.exists():
-        copied_customize_path.unlink()
-    if reverse_patch_path.exists():
-        reverse_patch_path.unlink()
+    fin()  # run ahead in case failed tests left junk
 
     syspath_sleuth.create_site_customize(customize_path)
     assert customize_path.exists()
@@ -260,11 +243,6 @@ def test_inject_sleuth(request, caplog):
     copied_customize_path = customize_path.with_suffix(syspath_sleuth.PRE_SLEUTH_SUFFIX)
     reverse_patch_path = customize_path.with_suffix(syspath_sleuth.REVERSE_PATCH_SUFFIX)
 
-    if customize_path.exists():
-        customize_path.unlink()
-    if reverse_patch_path.exists():
-        reverse_patch_path.unlink()
-
     def fin():
         if customize_path.exists():
             customize_path.unlink()
@@ -272,6 +250,7 @@ def test_inject_sleuth(request, caplog):
             reverse_patch_path.unlink()
 
     request.addfinalizer(finalizer=fin)
+    fin()  # run ahead in case failed tests left junk
 
     syspath_sleuth.inject_sleuth()
     assert customize_path.exists() and customize_path.stat().st_size != 0
@@ -311,14 +290,13 @@ def test_uninstall_sleuth(request, caplog):
     else:
         customize_path = syspath_sleuth.get_system_customize_path()
     reverse_patch_path = customize_path.with_suffix(syspath_sleuth.REVERSE_PATCH_SUFFIX)
-    if customize_path.exists():
-        customize_path.unlink()
 
     def fin():
         if customize_path.exists():
             customize_path.unlink()
 
     request.addfinalizer(finalizer=fin)
+    fin()  # run ahead in case failed tests left junk
 
     syspath_sleuth.inject_sleuth()
 
@@ -344,8 +322,46 @@ def test_uninstall_sleuth(request, caplog):
 
 
 def test_main(request, caplog):
+    caplog.set_level(logging.INFO)
+
+    if site.ENABLE_USER_SITE and site.check_enableusersite():
+        customize_path = syspath_sleuth.get_user_customize_path()
+    else:
+        customize_path = syspath_sleuth.get_system_customize_path()
+    copied_customize_path = customize_path.with_suffix(syspath_sleuth.PRE_SLEUTH_SUFFIX)
+    reverse_patch_path = customize_path.with_suffix(syspath_sleuth.REVERSE_PATCH_SUFFIX)
+
+    def fin():
+        if customize_path.exists():
+            customize_path.unlink()
+        if copied_customize_path.exists():
+            reverse_patch_path.unlink()
+        if reverse_patch_path.exists():
+            reverse_patch_path.unlink()
+
+    request.addfinalizer(finalizer=fin)
+    fin()  # run ahead in case failed tests left junk
 
     syspath_sleuth.main(["-i"])
-    test_inject_sleuth(request, caplog=caplog)
+    assert customize_path.exists() and customize_path.stat().st_size != 0
+    assert reverse_patch_path.exists() and reverse_patch_path.stat().st_size != 0
+    assert not copied_customize_path.exists()
+
+    creating_message = "Creating system site sitecustomize.py"
+    append_message = f"Appending {SysPathSleuth.__name__} to site customize: {customize_path}"
+    record: logging.LogRecord
+    for record, message in zip(caplog.get_records("call"), [creating_message, append_message]):
+        assert record.getMessage() == message, "Did not find expected log record message."
+        assert record.levelname == "INFO", "Did not find expected log record level."
+
+    caplog.clear()
+
     syspath_sleuth.main(["-u"])
-    test_uninstall_sleuth(request, caplog=caplog)
+    assert customize_path.exists() and customize_path.stat().st_size == 0
+    assert not reverse_patch_path.exists()
+
+    removing_message = f"Removing {SysPathSleuth.__name__} from site customize: {customize_path}"
+    record: logging.LogRecord
+    for record, message in zip(caplog.records, [removing_message]):
+        assert record.getMessage() == message, "Did not find expected log record message."
+        assert record.levelname == "INFO", "Did not find expected log record level."
