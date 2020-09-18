@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 __version__ = "2019.04.06.001"
 
-import logging
 import os
 import site
 import subprocess as sp
@@ -13,8 +12,8 @@ from typing import Optional, Sequence
 
 from syspath_sleuth import (
     parse_syspath_sleuth_args,
-    inject_sleuth_into_user_site,
-    inject_sleuth_into_system_site,
+    inject_sleuth,
+    uninstall_sleuth,
 )
 
 

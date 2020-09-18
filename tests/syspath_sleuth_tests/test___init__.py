@@ -2,6 +2,7 @@ import argparse
 import inspect
 import logging
 from pathlib import Path
+import site
 from typing import List
 
 from _pytest.capture import CaptureResult
@@ -250,7 +251,101 @@ def test_reverse_patch_sleuth(request, caplog):
         pytest.fail("Did not find expected log record.")
 
 
-def test_main(capsys):
+def test_inject_sleuth(request, caplog):
+    caplog.set_level(logging.INFO)
+    if site.ENABLE_USER_SITE and site.check_enableusersite():
+        customize_path = syspath_sleuth.get_user_customize_path()
+    else:
+        customize_path = syspath_sleuth.get_system_customize_path()
+    copied_customize_path = customize_path.with_suffix(syspath_sleuth.PRE_SLEUTH_SUFFIX)
+    reverse_patch_path = customize_path.with_suffix(syspath_sleuth.REVERSE_PATCH_SUFFIX)
+
+    if customize_path.exists():
+        customize_path.unlink()
+    if reverse_patch_path.exists():
+        reverse_patch_path.unlink()
+
+    def fin():
+        if customize_path.exists():
+            customize_path.unlink()
+        if reverse_patch_path.exists():
+            reverse_patch_path.unlink()
+
+    request.addfinalizer(finalizer=fin)
+
+    syspath_sleuth.inject_sleuth()
+    assert customize_path.exists() and customize_path.stat().st_size != 0
+    assert reverse_patch_path.exists() and reverse_patch_path.stat().st_size != 0
+    assert not copied_customize_path.exists()
+    with customize_path.open() as customize_f:
+        assert f"class {SysPathSleuth.__name__}" in customize_f.read()
+
+    creating_message = "Creating system site sitecustomize.py"
+    append_message = f"Appending {SysPathSleuth.__name__} to site customize: {customize_path}"
+    record: logging.LogRecord
+    for record, message in zip(caplog.get_records("call"), [creating_message, append_message]):
+        assert record.getMessage() == message, "Did not find expected log record message."
+        assert record.levelname == "INFO", "Did not find expected log record level."
+
+    caplog.clear()
+
+    # Inject a second time; should remove existing and re-append SysPathSleuth
+    syspath_sleuth.inject_sleuth()
+    assert customize_path.exists() and customize_path.stat().st_size != 0
+    assert reverse_patch_path.exists() and reverse_patch_path.stat().st_size != 0
+    assert not copied_customize_path.exists()
+    with customize_path.open() as customize_f:
+        assert f"class {SysPathSleuth.__name__}" in customize_f.read()
+
+    removing_message = f"Removing {SysPathSleuth.__name__} from site customize: {customize_path}"
+    append_message = f"Appending {SysPathSleuth.__name__} to site customize: {customize_path}"
+    record: logging.LogRecord
+    for record, message in zip(caplog.records, [removing_message, append_message]):
+        assert record.getMessage() == message, "Did not find expected log record message."
+        assert record.levelname == "INFO", "Did not find expected log record level."
+
+
+def test_uninstall_sleuth(request, caplog):
+    if site.ENABLE_USER_SITE and site.check_enableusersite():
+        customize_path = syspath_sleuth.get_user_customize_path()
+    else:
+        customize_path = syspath_sleuth.get_system_customize_path()
+    reverse_patch_path = customize_path.with_suffix(syspath_sleuth.REVERSE_PATCH_SUFFIX)
+    if customize_path.exists():
+        customize_path.unlink()
+
+    def fin():
+        if customize_path.exists():
+            customize_path.unlink()
+
+    request.addfinalizer(finalizer=fin)
+
+    syspath_sleuth.inject_sleuth()
+
+    caplog.set_level(logging.INFO)
+    syspath_sleuth.uninstall_sleuth()
+    assert customize_path.exists() and customize_path.stat().st_size == 0
+    assert not reverse_patch_path.exists()
+
+    removing_message = f"Removing {SysPathSleuth.__name__} from site customize: {customize_path}"
+    record: logging.LogRecord
+    for record, message in zip(caplog.get_records("call"), [removing_message]):
+        assert record.getMessage() == message, "Did not find expected log record message."
+        assert record.levelname == "INFO", "Did not find expected log record level."
+
+    caplog.clear()
+
+    # Uninstall a second time; should be a noop
+    syspath_sleuth.uninstall_sleuth()
+    assert customize_path.exists() and customize_path.stat().st_size == 0
+    assert not reverse_patch_path.exists()
+
+    assert len(caplog.records) == 0
+
+
+def test_main(request, caplog):
+
+    syspath_sleuth.main(["-i"])
+    test_inject_sleuth(request, caplog=caplog)
     syspath_sleuth.main(["-u"])
-    results: CaptureResult = capsys.readouterr()
-    # assert results.out == "{'install': False, 'uninstall': True}\n"
+    test_uninstall_sleuth(request, caplog=caplog)
