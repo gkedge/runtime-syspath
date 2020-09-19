@@ -138,9 +138,13 @@ def get_system_customize_path() -> Path:
 
 
 def inject_sleuth():
+    # When using venv, site.ENABLE_USER_SITE is False. When using virtual environments,
+    # the effort is to isolate the activities within one virtual environment per Python
+    # system Python from other virtual environments. Were the user site enabled, it would
+    # affect other Python virtual environments.
     if site.ENABLE_USER_SITE and site.check_enableusersite():
         customize_path = get_user_customize_path()
-        customize_path.parent.mkdir(parents=True)
+        customize_path.parent.mkdir(parents=True, exist_ok=True)
     else:
         customize_path = get_system_customize_path()
 
@@ -154,6 +158,10 @@ def inject_sleuth():
 
 
 def uninstall_sleuth():
+    # When using venv, site.ENABLE_USER_SITE is False. When using virtual environments,
+    # the effort is to isolate the activities within one virtual environment per Python
+    # system Python from other virtual environments. Were the user site enabled, it would
+    # affect other Python virtual environments.
     if site.ENABLE_USER_SITE and site.check_enableusersite():
         customize_path = get_user_customize_path()
         customize_path.parent.mkdir(parents=True)
