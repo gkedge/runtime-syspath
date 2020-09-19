@@ -29,7 +29,7 @@ class SysPathSleuth(list):
 
     def remove(self, *args):
         self._where("remove", args)
-        return super().pop(*args)
+        return super().remove(*args)
 
     def __delitem__(self, *args):
         self._where("__delitem__", args)

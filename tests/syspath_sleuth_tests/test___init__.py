@@ -1,12 +1,15 @@
 import argparse
 import inspect
 import logging
-from pathlib import Path
+import re
 import site
+import sys
+from pathlib import Path
 from typing import List
 
-from _pytest.capture import CaptureResult
 import pytest
+from _pytest.capture import CaptureResult
+from _pytest.fixtures import FixtureRequest
 
 import syspath_sleuth
 from syspath_sleuth import SysPathSleuth
@@ -96,6 +99,7 @@ def test_create_site_customize(request, caplog):
     def fin():
         if test_path.exists():
             test_path.unlink()
+
     request.addfinalizer(finalizer=fin)
     fin()  # run ahead in case failed tests left junk
 
@@ -365,3 +369,54 @@ def test_main(request, caplog):
     for record, message in zip(caplog.records, [removing_message]):
         assert record.getMessage() == message, "Did not find expected log record message."
         assert record.levelname == "INFO", "Did not find expected log record level."
+
+
+def test_live_report(request: FixtureRequest, testdir):
+    test_case_name = request.node.name
+
+    def fin():
+        syspath_sleuth.main(["-u"])
+
+    request.addfinalizer(finalizer=fin)
+
+    syspath_sleuth.main(["-i"])
+    p = testdir.makepyfile(
+        """
+        import sys
+        sys.path.append("yow")
+        sys.path.insert(0, "yowsa")
+        sys.path.remove("yow")
+        sys.path.pop()
+        sys.path.extend(["yow", "yowsa"])
+    """
+    )
+    result = testdir.runpython(p)
+
+    assert "WARNING: SysPathSleuth is installed in system site packages:" in result.outlines[0]
+
+    relevant_index = 1
+    for index in range(1, len(result.outlines)):
+        if "yow" in result.outlines[index]:
+            relevant_index = index
+            break
+
+    regex = r"INFO: sys\.path\.append\(\'yow\',\) from .*%s\.py:2\)$" % test_case_name
+    assert re.match(regex, result.outlines[relevant_index])
+
+    relevant_index += 1
+    regex = r"INFO: sys\.path\.insert\(0, \'yowsa\'\) from .*%s\.py:3\)$" % test_case_name
+    assert re.match(regex, result.outlines[relevant_index])
+
+    relevant_index += 1
+    regex = r"INFO: sys\.path\.remove\(\'yow\',\) from .*%s\.py:4\)$" % test_case_name
+    assert re.match(regex, result.outlines[relevant_index])
+
+    relevant_index += 1
+    regex = r"INFO: sys\.path\.pop\(\) from .*%s\.py:5\)$" % test_case_name
+    assert re.match(regex, result.outlines[relevant_index])
+
+    relevant_index += 1
+    regex = (
+        r"INFO: sys\.path\.extend\(\[\'yow\', \'yowsa\'\],\) from .*%s\.py:6\)$" % test_case_name
+    )
+    assert re.match(regex, result.outlines[relevant_index])

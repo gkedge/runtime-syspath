@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+pytest_plugins = "pytester"
 
 # None of this kind of work to find the root or append 'src' dirs to the 'sys.path' need be
 # performed by conftest.py's or __main__'s using the runtime_syspath::add_srcdirs_to_syspath
