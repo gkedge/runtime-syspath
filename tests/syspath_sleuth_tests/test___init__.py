@@ -3,7 +3,6 @@ import inspect
 import logging
 import re
 import site
-import sys
 from pathlib import Path
 from typing import List
 
@@ -108,7 +107,7 @@ def test_create_site_customize(request, caplog):
     record: logging.LogRecord
     for record in caplog.get_records("call"):
         if "Creating system site: yow.yowsa" in record.message:
-            assert record.levelname == "INFO"
+            assert record.levelname == "WARNING"
             break
 
     assert test_path.exists()
@@ -227,7 +226,7 @@ def test_reverse_patch_sleuth(request, caplog):
     syspath_sleuth.reverse_patch_sleuth(customize_path)
 
     assert not reverse_patch_path.exists()
-    assert customize_path.exists() and customize_path.stat().st_size == 0
+    assert not customize_path.exists()
 
     record: logging.LogRecord
     for record in caplog.get_records("call"):
@@ -264,10 +263,13 @@ def test_inject_sleuth(request, caplog):
         assert f"class {SysPathSleuth.__name__}" in customize_f.read()
 
     creating_message = "Creating system site sitecustomize.py"
-    append_message = f"Appending {SysPathSleuth.__name__} to site customize: {customize_path}"
+    append_message = (
+        f"Appending {SysPathSleuth.__name__} to site customize: "
+        f"{SysPathSleuth.relative_path(customize_path)}"
+    )
     record: logging.LogRecord
     for record, message in zip(caplog.get_records("call"), [creating_message, append_message]):
-        assert record.getMessage() == message, "Did not find expected log record message."
+        assert message in record.getMessage(), "Did not find expected log record message."
         assert record.levelname == "INFO", "Did not find expected log record level."
 
     caplog.clear()
@@ -280,12 +282,26 @@ def test_inject_sleuth(request, caplog):
     with customize_path.open() as customize_f:
         assert f"class {SysPathSleuth.__name__}" in customize_f.read()
 
-    removing_message = f"Removing {SysPathSleuth.__name__} from site customize: {customize_path}"
-    append_message = f"Appending {SysPathSleuth.__name__} to site customize: {customize_path}"
+    reinstalling_message = "Reinstalling SysPathSleuth in system site..."
+    create_message = "Creating system site sitecustomize.py"
+
+    removing_message = (
+        f"Removing {SysPathSleuth.__name__} from site customize: "
+        f"{SysPathSleuth.relative_path(customize_path)}"
+    )
+    append_message = (
+        f"Appending {SysPathSleuth.__name__} to site customize: "
+        f"{SysPathSleuth.relative_path(customize_path)}"
+    )
     record: logging.LogRecord
-    for record, message in zip(caplog.records, [removing_message, append_message]):
+    for record, message in zip(
+        caplog.records, [reinstalling_message, removing_message, create_message, append_message]
+    ):
         assert record.getMessage() == message, "Did not find expected log record message."
-        assert record.levelname == "INFO", "Did not find expected log record level."
+        if message in create_message or message in removing_message or message in append_message:
+            assert record.levelname == "INFO", "Did not find expected log record level."
+            continue
+        assert record.levelname == "WARNING", "Did not find expected log record level."
 
 
 def test_uninstall_sleuth(request, caplog):
@@ -302,27 +318,49 @@ def test_uninstall_sleuth(request, caplog):
     request.addfinalizer(finalizer=fin)
     fin()  # run ahead in case failed tests left junk
 
+    caplog.set_level(logging.NOTSET)
     syspath_sleuth.inject_sleuth()
+
+    caplog.clear()
 
     caplog.set_level(logging.INFO)
     syspath_sleuth.uninstall_sleuth()
-    assert customize_path.exists() and customize_path.stat().st_size == 0
+    assert not customize_path.exists()
     assert not reverse_patch_path.exists()
 
-    removing_message = f"Removing {SysPathSleuth.__name__} from site customize: {customize_path}"
+    removing_message = (
+        f"Removing {SysPathSleuth.__name__} from site customize: "
+        f"{SysPathSleuth.relative_path(customize_path)}"
+    )
+    uninstalled_message = (
+        f"SysPathSleuth uninstalled from system site: "
+        f"{SysPathSleuth.relative_path(customize_path)}"
+    )
     record: logging.LogRecord
-    for record, message in zip(caplog.get_records("call"), [removing_message]):
-        assert record.getMessage() == message, "Did not find expected log record message."
-        assert record.levelname == "INFO", "Did not find expected log record level."
+    for record, message in zip(caplog.records, [removing_message, uninstalled_message]):
+        assert message in record.getMessage(), "Did not find expected log record message."
+        if message in removing_message:
+            assert record.levelname == "INFO", "Did not find expected log record level."
+            continue
+        assert record.levelname == "WARNING", "Did not find expected log record level."
 
+    assert len(caplog.records) == 2
     caplog.clear()
 
     # Uninstall a second time; should be a noop
     syspath_sleuth.uninstall_sleuth()
-    assert customize_path.exists() and customize_path.stat().st_size == 0
+    assert not customize_path.exists()
     assert not reverse_patch_path.exists()
 
-    assert len(caplog.records) == 0
+    was_not_installed_message = (
+        f"SysPathSleuth was not installed in system site: "
+        f"{SysPathSleuth.relative_path(customize_path)}"
+    )
+    record: logging.LogRecord
+    for record, message in zip(caplog.records, [was_not_installed_message]):
+        assert message in record.getMessage(), "Did not find expected log record message."
+        assert record.levelname == "WARNING", "Did not find expected log record level."
+    assert len(caplog.records) == 1
 
 
 def test_main(request, caplog):
@@ -346,28 +384,34 @@ def test_main(request, caplog):
     request.addfinalizer(finalizer=fin)
     fin()  # run ahead in case failed tests left junk
 
-    syspath_sleuth.main(["-i"])
+    syspath_sleuth.syspath_sleuth_main(["-i"])
     assert customize_path.exists() and customize_path.stat().st_size != 0
     assert reverse_patch_path.exists() and reverse_patch_path.stat().st_size != 0
     assert not copied_customize_path.exists()
 
     creating_message = "Creating system site sitecustomize.py"
-    append_message = f"Appending {SysPathSleuth.__name__} to site customize: {customize_path}"
+    append_message = (
+        f"Appending {SysPathSleuth.__name__} to site customize: "
+        f"{SysPathSleuth.relative_path(customize_path)}"
+    )
     record: logging.LogRecord
     for record, message in zip(caplog.get_records("call"), [creating_message, append_message]):
-        assert record.getMessage() == message, "Did not find expected log record message."
+        assert message in record.getMessage(), "Did not find expected log record message."
         assert record.levelname == "INFO", "Did not find expected log record level."
 
     caplog.clear()
 
-    syspath_sleuth.main(["-u"])
-    assert customize_path.exists() and customize_path.stat().st_size == 0
+    syspath_sleuth.syspath_sleuth_main(["-u"])
+    assert not customize_path.exists()
     assert not reverse_patch_path.exists()
 
-    removing_message = f"Removing {SysPathSleuth.__name__} from site customize: {customize_path}"
+    removing_message = (
+        f"Removing {SysPathSleuth.__name__} from site customize: "
+        f"{SysPathSleuth.relative_path(customize_path)}"
+    )
     record: logging.LogRecord
     for record, message in zip(caplog.records, [removing_message]):
-        assert record.getMessage() == message, "Did not find expected log record message."
+        assert message in record.getMessage(), "Did not find expected log record message."
         assert record.levelname == "INFO", "Did not find expected log record level."
 
 
@@ -375,12 +419,12 @@ def test_live_report(request: FixtureRequest, testdir):
     test_case_name = request.node.name
 
     def fin():
-        syspath_sleuth.main(["-u"])
+        syspath_sleuth.syspath_sleuth_main(["-u"])
 
     request.addfinalizer(finalizer=fin)
 
-    syspath_sleuth.main(["-i"])
-    p = testdir.makepyfile(
+    syspath_sleuth.syspath_sleuth_main(["-i"])
+    temp_test_py_file = testdir.makepyfile(
         """
         import sys
         sys.path.append("yow")
@@ -390,33 +434,32 @@ def test_live_report(request: FixtureRequest, testdir):
         sys.path.extend(["yow", "yowsa"])
     """
     )
-    result = testdir.runpython(p)
+    result = testdir.runpython(temp_test_py_file)
 
-    assert "WARNING: SysPathSleuth is installed in system site packages:" in result.outlines[0]
+    relevant_index = 0
+    regex = r"SysPathSleuth installed in (system|user) site:"
+    assert re.match(regex, result.outlines[relevant_index])
 
-    relevant_index = 1
     for index in range(1, len(result.outlines)):
         if "yow" in result.outlines[index]:
             relevant_index = index
             break
 
-    regex = r"INFO: sys\.path\.append\(\'yow\',\) from .*%s\.py:2\)$" % test_case_name
+    regex = r"sys\.path\.append\(\'yow\',\) from .*%s\.py:2$" % test_case_name
     assert re.match(regex, result.outlines[relevant_index])
 
     relevant_index += 1
-    regex = r"INFO: sys\.path\.insert\(0, \'yowsa\'\) from .*%s\.py:3\)$" % test_case_name
+    regex = r"sys\.path\.insert\(0, \'yowsa\'\) from .*%s\.py:3$" % test_case_name
     assert re.match(regex, result.outlines[relevant_index])
 
     relevant_index += 1
-    regex = r"INFO: sys\.path\.remove\(\'yow\',\) from .*%s\.py:4\)$" % test_case_name
+    regex = r"sys\.path\.remove\(\'yow\',\) from .*%s\.py:4$" % test_case_name
     assert re.match(regex, result.outlines[relevant_index])
 
     relevant_index += 1
-    regex = r"INFO: sys\.path\.pop\(\) from .*%s\.py:5\)$" % test_case_name
+    regex = r"sys\.path\.pop\(\) from .*%s\.py:5$" % test_case_name
     assert re.match(regex, result.outlines[relevant_index])
 
     relevant_index += 1
-    regex = (
-        r"INFO: sys\.path\.extend\(\[\'yow\', \'yowsa\'\],\) from .*%s\.py:6\)$" % test_case_name
-    )
+    regex = r"sys\.path\.extend\(\[\'yow\', \'yowsa\'\],\) from .*%s\.py:6$" % test_case_name
     assert re.match(regex, result.outlines[relevant_index])

@@ -11,3 +11,4 @@ disable:
     missing-function-docstring,
     no-self-use,
     wrong-import-position,
+    duplicate-code,

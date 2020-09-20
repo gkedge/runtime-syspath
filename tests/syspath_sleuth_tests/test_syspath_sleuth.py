@@ -1,5 +1,6 @@
 import inspect
 import logging
+from pathlib import Path, PurePath
 from typing import List
 
 from _pytest.capture import CaptureFixture
@@ -23,8 +24,9 @@ def test_append_print(capsys: CaptureFixture):
     out_lines: List[str] = out.splitlines(keepends=False)
     assert len(out_lines) == 1, "Unexpected line count"
     message: str = out_lines[0]
-    assert message.startswith("INFO: sys.path.append('yow',)")
-    assert f"{traceback.filename}:{traceback.lineno - 6}" in message
+    assert message.startswith("sys.path.append('yow',)")
+    filename = PurePath(traceback.filename).relative_to(Path.cwd())
+    assert f"{filename}:{traceback.lineno - 6}" in message
 
 
 def test_append_logger(caplog: LogCaptureFixture):
@@ -44,8 +46,18 @@ def test_append_logger(caplog: LogCaptureFixture):
     assert len(log_records) == 1, "Unexpected log count."
     message: str = log_records[0].getMessage()
     assert message.startswith("sys.path.append('yow',)")
-    assert f"{traceback.filename}:{traceback.lineno - 6}" in message
+    filename = PurePath(traceback.filename).relative_to(Path.cwd())
+    assert f"{filename}:{traceback.lineno - 6}" in message
 
 
 def test_is_sleuth_active():
     assert not SysPathSleuth.is_sleuth_active()
+
+
+def test_get_base_list():
+    sleuth = SysPathSleuth()
+    sleuth.append("yow")
+
+    base_list = sleuth.get_base_list()
+    assert not isinstance(base_list, SysPathSleuth)
+    assert "yow" in base_list and len(base_list) == 1

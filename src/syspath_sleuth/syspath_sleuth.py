@@ -4,11 +4,12 @@ import site
 import sys
 from pathlib import Path, PurePath
 from types import FrameType
-from typing import Optional
+from typing import List, Optional
 
 
 class SysPathSleuth(list):
     logger: logging.Logger = logging.getLogger("runtime-syspath.SysPathSleuth")
+    logger.setLevel(logging.NOTSET)
     logger.propagate = False
 
     def insert(self, *args):
@@ -39,19 +40,23 @@ class SysPathSleuth(list):
         self._where("__setitem__", args)
         return super().__setitem__(*args)
 
+    def get_base_list(self) -> List[str]:
+        return list(self)
+
     @classmethod
     def config_logger(cls, handler: logging.Handler = None, level: int = -1):
         if level != -1:
             cls.logger.setLevel(level)
         if handler:
             cls.logger.addHandler(handler)
-            if not cls.logger.isEnabledFor(handler.level):
-                level_name = logging.getLevelName(cls.logger.getEffectiveLevel())
-                logger_message = (
-                    f"{cls.logger.name}'s logger level ({level_name}) is not sufficient to "
-                    f"leverage passed handler's level ({handler.level}) yet."
+            if cls.logger.getEffectiveLevel() < handler.level:
+                logger_level_name = logging.getLevelName(cls.logger.getEffectiveLevel())
+                handler_level_name = logging.getLevelName(handler.level)
+                message = (
+                    f"Handler's level ({handler_level_name}) is insufficient "
+                    f"to log at {cls.logger.name}'s level ({logger_level_name}) yet."
                 )
-                cls._inform_user(logger_message)
+                cls._inform_user(message)
 
     @classmethod
     def _where(cls, action, args):
@@ -65,7 +70,20 @@ class SysPathSleuth(list):
             frame_info: inspect.Traceback = inspect.getframeinfo(syspath_caller)
 
         if frame_info:
-            message = f"sys.path.{action}{args} from {frame_info.filename}:{frame_info.lineno}"
+            filename = PurePath(frame_info.filename)
+            try:
+                filename = PurePath(frame_info.filename).relative_to(sys.base_prefix)
+            except ValueError:
+                filename_orig = filename
+                cwd = Path.cwd()
+                while filename == filename_orig:
+                    try:
+                        filename = PurePath(frame_info.filename).relative_to(cwd)
+                        break
+                    except ValueError:
+                        cwd = cwd.parent
+
+            message = f"sys.path.{action}{args} from {filename}:{frame_info.lineno}"
             cls._inform_user(message)
 
     @classmethod
@@ -85,7 +103,7 @@ class SysPathSleuth(list):
         if cls._is_logging_on() and cls.logger.isEnabledFor(logging_level):
             cls.logger.log(logging_level, message)
         else:
-            print(f"{logging.getLevelName(logging_level)}: {message})")
+            print(message)
 
     @classmethod
     def is_sleuth_active(cls):
@@ -99,8 +117,8 @@ class SysPathSleuth(list):
     @staticmethod
     def get_user_customize_path() -> Path:
         user_customize_module_name = PurePath("usercustomize.py")
-        sleuth_user_path = Path(site.getusersitepackages()) / user_customize_module_name
-        return sleuth_user_path
+        user_customize_path = Path(site.getusersitepackages()) / user_customize_module_name
+        return user_customize_path
 
     @staticmethod
     def get_system_customize_path() -> Optional[Path]:
@@ -112,6 +130,23 @@ class SysPathSleuth(list):
             if system_site_path.name == "site-packages" and system_site_path.is_dir():
                 return system_site_path / site_customize_module_name
         return None
+
+    @staticmethod
+    def relative_path(customize_path):
+        try:
+            customize_path = customize_path.relative_to(sys.base_prefix)
+        except ValueError:
+            customize_path_orig = customize_path
+            cwd = Path.cwd()
+            while customize_path == customize_path_orig:
+                try:
+                    customize_path = customize_path.relative_to(cwd)
+                    break
+                except ValueError:
+                    if str(cwd) == "/":
+                        break
+                    cwd = cwd.parent
+        return customize_path
 
     @classmethod
     def _is_active_in_user_site(cls, sleuth_module_file_name):
@@ -126,12 +161,12 @@ class SysPathSleuth(list):
             # It is likely syspath_sleuth.py is being tested
             return False
 
-        sleuth_user_path = cls.get_user_customize_path()
-        if not sleuth_user_path.exists():
+        user_customize_path = cls.get_user_customize_path()
+        if not user_customize_path.exists():
             return False
-
-        sleuth_message = f"SysPathSleuth is installed in user site packages: {sleuth_user_path}"
-        cls._inform_user(sleuth_message, logging_level=logging.WARNING)
+        user_customize_path = cls.relative_path(user_customize_path)
+        sleuth_message = f"SysPathSleuth installed in user site: {user_customize_path}"
+        cls._inform_user(sleuth_message)
         return True
 
     @classmethod
@@ -140,12 +175,13 @@ class SysPathSleuth(list):
             # It is likely syspath_sleuth.py is being tested
             return False
 
-        sleuth_system_path = cls.get_system_customize_path()
-        if not sleuth_system_path or not sleuth_system_path.exists():
+        system_custom_path = cls.get_system_customize_path()
+        if not system_custom_path or not system_custom_path.exists():
             return False
 
-        sleuth_message = f"SysPathSleuth is installed in system site packages: {sleuth_system_path}"
-        cls._inform_user(sleuth_message, logging_level=logging.WARNING)
+        system_custom_path = cls.relative_path(system_custom_path)
+        sleuth_message = f"SysPathSleuth installed in system site: {system_custom_path}"
+        cls._inform_user(sleuth_message)
         return True
 
 
