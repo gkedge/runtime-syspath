@@ -120,13 +120,14 @@ directory trees:
 
 On a project riddled with programmatically appending source paths to
 `sys.path`, a tool to discover which modules are mucking with `sys.path`
-and when. This discovery can assist with manually eradicating `sys.path`
-access in favor of updating imports with fully-qualified (from but, not
-including `src`), absolute module/package names. static tools would then
-be able to discover the modules/packages imported.
+and when could prove useful. This discovery can assist with manually
+eradicating `sys.path` access in favor of updating imports with
+fully-qualified (anchored at but, not including `src`), absolute
+module/package names. static tools would then be able to discover the
+modules/packages imported.
 > Relative paths: There is a place for relative paths when importing
 > intra-package modules. But, when importing inter-package modules,
-> leveraging fully-qualified, absolute module/package names is the wise
+> leveraging fully-qualified, absolute module/package names is a wiser
 > play.
 
 SysPathSleuth is a monkey-patch of `sys.path` to report on `sys.path`
@@ -135,11 +136,13 @@ into either the user or system site's _customize_ modules
 (`~/pathto/user_site/usercustomize.py` or
 `/pathto/python/site-packages/sitecustomize.py`). SysPathSleuth can be
 installed/uninstalled using:
-* python -m syspath_slueth [--install _or_ --uninstall]
+* python -m syspath_slueth \[--install _or_ --uninstall]
 * at the start within a running program
 
+At the start of a running program prior:
 ```
 import atexit
+from mypackage import go_main_go
 from runtime-syspath import syspath_slueth
 
 syspath_sleuth.inject_sleuth()
@@ -148,5 +151,7 @@ def uninstall_syspath_sleuth():
 
 atexit.register(uninstall_syspath_sleuth)
 
+if __name__ == "__main__":
+    go_main_go()
+
 ```
-_The rest of your \_\_name\_\_ == "__main__" module follows..._
