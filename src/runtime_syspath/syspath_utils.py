@@ -96,9 +96,9 @@ def add_srcdirs_to_syspath() -> None:
 
     tested_src: Path
     for tested_src in chain.from_iterable([all_src_dirs, all_test_src_dirs]):
-        testes_src_str = str(tested_src)
-        if tested_src.is_dir() and testes_src_str not in sys.path:
-            sys.path.append(testes_src_str)
+        tested_src_str = str(tested_src)
+        if tested_src.is_dir() and tested_src_str not in sys.path:
+            sys.path.append(tested_src_str)
 
     diff_path_strs: Set[str] = set(prior_sys_path).symmetric_difference(set(sys.path))
     if len(diff_path_strs) > 0:
