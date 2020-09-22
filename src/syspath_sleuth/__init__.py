@@ -219,13 +219,6 @@ def syspath_sleuth_main(args: Optional[Sequence[str]] = None):
     if args_namespace.install:
         inject_sleuth()
 
-        # pylint: disable=import-outside-toplevel
-        import sitecustomize
-
-        # pylint: enable=import-outside-toplevel
-
-        if not isinstance(sys.path, sitecustomize.SysPathSleuth):
-            print("Hmmm... expected sys.path to be monkey-patched.")
         # handler = logging.StreamHandler(sys.stdout)
         # handler.setLevel(logging.INFO)
         # sys.path.config_logger(handler, logging.INFO)

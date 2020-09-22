@@ -1,0 +1,34 @@
+:bug: BugFix
+:lock: SecurityFix
+// Comment
+:recycle: Refactoring
+:books: Documentation
+
+/* string prefix */
+|fix:| BugFix
+|doc:| Documentation
+
+commit {
+    :tada: test
+
+    test {
+        |aaa| test
+    }
+
+    ...test
+}
+
+
+merge {
+    :art: test
+    > test
+}
+
+tag {
+    :+1: test
+}
+
+test {
+    :tada: test
+    |construction| Working
+}
