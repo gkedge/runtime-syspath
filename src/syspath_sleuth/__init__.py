@@ -238,7 +238,7 @@ def syspath_sleuth_main(args: Optional[Sequence[str]] = None):
             if isinstance(sys.path, sitecustomize.SysPathSleuth):
                 print("Hmmm... expected sys.path NOT to be monkey-patched.")
 
-        except AttributeError:
+        except (AttributeError, ModuleNotFoundError):
             # This will occur if SysPathSleuth was not installed prior. But, don't skip the
             # uninstall_sleuth() as the user messaging associated with this condition is shared.
             pass

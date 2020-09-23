@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import runtime_syspath
 
 runtime_syspath.add_srcdirs_to_syspath()

@@ -165,7 +165,7 @@ class SysPathSleuth(list):
         if not user_customize_path.exists():
             return False
         user_customize_path = cls.relative_path(user_customize_path)
-        sleuth_message = f"SysPathSleuth installed in user site: {user_customize_path}"
+        sleuth_message = f"SysPathSleuth is installed in user site: {user_customize_path}"
         cls._inform_user(sleuth_message)
         return True
 
@@ -180,7 +180,7 @@ class SysPathSleuth(list):
             return False
 
         system_custom_path = cls.relative_path(system_custom_path)
-        sleuth_message = f"SysPathSleuth installed in system site: {system_custom_path}"
+        sleuth_message = f"SysPathSleuth is installed in system site: {system_custom_path}"
         cls._inform_user(sleuth_message)
         return True
 

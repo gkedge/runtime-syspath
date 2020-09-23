@@ -1,8 +1,9 @@
+#! /usr/bin/env python3
+
 import atexit
 import logging
 import sys
 
-import runtime_syspath
 import syspath_sleuth
 
 logger: logging.Logger = logging.getLogger(__file__)
@@ -19,7 +20,6 @@ def uninstall_syspath_sleuth():
 atexit.register(uninstall_syspath_sleuth)
 
 if __name__ == "__main__":
-    runtime_syspath.print_syspath(sort=False)
 
     # START Sanity Test; not necessary for real use!
     # pylint: disable=import-outside-toplevel
@@ -31,17 +31,20 @@ if __name__ == "__main__":
         sys.exit("Expected sys.path to be monkey-patched.")
     # END Sanity Test
 
-    sys_path: sitecustomize.SysPathSleuth = sys.path
     consoleHandler: logging.Handler = logging.StreamHandler(sys.stdout)
     consoleHandler.setLevel(level)
 
-    sys_path.config_logger(handler=consoleHandler, level=level)
+    sys.path.config_logger(handler=consoleHandler, level=level)
+
+    import runtime_syspath
+
+    runtime_syspath.print_syspath(sort=False)
 
     for path in sys.path:
         if path.endswith('runtime-syspath/src'):
             logger.warning("Since this script is run with '/project-root/src' in 'sys.path', "
-                           "no report of its addition will be made by "
-                           "runtime_syspath.add_srcdirs_to_syspath()")
+                           "\n\tno report of its addition will be made by "
+                           "runtime_syspath.add_srcdirs_to_syspath()\n")
     runtime_syspath.add_srcdirs_to_syspath()
 
     runtime_syspath.print_syspath(sort=False)
