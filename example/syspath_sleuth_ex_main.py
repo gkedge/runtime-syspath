@@ -37,11 +37,10 @@ if __name__ == "__main__":
 
     sys_path.config_logger(handler=consoleHandler, level=level)
 
-    # Whether run from this projects root directory as
     for path in sys.path:
         if path.endswith('runtime-syspath/src'):
-            logger.warning("Since this script is run to already have 'src' in "
-                           "'sys.path, no report of its addition will be made by "
+            logger.warning("Since this script is run with '/project-root/src' in 'sys.path', "
+                           "no report of its addition will be made by "
                            "runtime_syspath.add_srcdirs_to_syspath()")
     runtime_syspath.add_srcdirs_to_syspath()
 
