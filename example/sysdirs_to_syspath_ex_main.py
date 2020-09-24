@@ -7,7 +7,6 @@ runtime_syspath.print_syspath(sort=False)
 
 if __name__ == "__main__":
 
-
     import runtime_syspath_ex
 
     runtime_syspath_ex.go_main_go()
