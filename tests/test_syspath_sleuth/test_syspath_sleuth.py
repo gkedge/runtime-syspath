@@ -6,7 +6,7 @@ from typing import List
 from _pytest.capture import CaptureFixture
 from _pytest.logging import LogCaptureFixture
 
-from syspath_sleuth import SysPathSleuth
+from runtime_syspath.syspath_sleuth import SysPathSleuth
 
 
 def test_append_print(capsys: CaptureFixture):

@@ -142,7 +142,7 @@ installed/uninstalled using:
 At the start of a running program prior:
 ```
 import atexit
-from mypackage import go_main_go
+import syspath_sleuth
 from runtime-syspath import syspath_slueth
 
 syspath_sleuth.inject_sleuth()

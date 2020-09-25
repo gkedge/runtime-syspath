@@ -4,7 +4,7 @@ import atexit
 import logging
 import sys
 
-import syspath_sleuth
+from runtime_syspath import syspath_sleuth
 
 logger: logging.Logger = logging.getLogger(__file__)
 LOGGER_LEVEL = logging.INFO
@@ -33,13 +33,13 @@ atexit.register(uninstall_syspath_sleuth)
 if __name__ == "__main__":
 
     # START Sanity Test; not necessary for real use!
-    # pylint: disable=import-outside-toplevel
-    import sitecustomize
-
-    # pylint: enable=import-outside-toplevel
-
-    if not isinstance(sys.path, sitecustomize.SysPathSleuth):
-        sys.exit("Expected sys.path to be monkey-patched.")
+    # # pylint: disable=import-outside-toplevel
+    # import sitecustomize
+    #
+    # # pylint: enable=import-outside-toplevel
+    #
+    # if not isinstance(sys.path, sitecustomize.SysPathSleuth):
+    #     sys.exit("Expected sys.path to be monkey-patched.")
     # END Sanity Test
 
     consoleHandler: logging.Handler = logging.StreamHandler(sys.stdout)

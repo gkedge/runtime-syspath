@@ -9,9 +9,10 @@ from typing import List
 import pytest
 from _pytest.capture import CaptureResult
 from _pytest.fixtures import FixtureRequest
+import runtime_syspath
 
-import syspath_sleuth
-from syspath_sleuth import SysPathSleuth
+from runtime_syspath import syspath_sleuth
+from runtime_syspath.syspath_sleuth import SysPathSleuth
 
 
 def test_parse_args_install():
@@ -155,7 +156,7 @@ def test_append_sleuth_to_customize(request, caplog):
 
     assert customize_path.exists()
     src_lines: List[str]
-    src_lines, _ = inspect.getsourcelines(syspath_sleuth.syspath_sleuth)
+    src_lines, _ = inspect.getsourcelines(runtime_syspath.syspath_sleuth.syspath_sleuth)
 
     with customize_path.open() as site_customize_path_f:
         site_customize_lines: List[str] = site_customize_path_f.readlines()
@@ -437,7 +438,7 @@ def test_live_report(request: FixtureRequest, testdir):
     result = testdir.runpython(temp_test_py_file)
 
     relevant_index = 0
-    regex = r"SysPathSleuth installed in (system|user) site:"
+    regex = r"SysPathSleuth is installed in (system|user) site:"
     assert re.match(regex, result.outlines[relevant_index])
 
     for index in range(1, len(result.outlines)):

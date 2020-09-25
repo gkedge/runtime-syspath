@@ -12,7 +12,7 @@
     <option name="ADD_CONTENT_ROOTS" value="false" />
     <option name="ADD_SOURCE_ROOTS" value="false" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="syspath_sleuth" />
+    <option name="SCRIPT_NAME" value="runtime_syspath.syspath_sleuth" />
     <option name="PARAMETERS" value="-u" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
