@@ -53,14 +53,19 @@ def parse_syspath_sleuth_args(
     return parser.parse_args(args)
 
 
-def append_sleuth_to_customize(customize_path):
+def append_sleuth_to_customize(customize_path: Path, syspath_sleuth_path: Optional[Path] = None):
     logger.info(
         "Appending %s to site customize: %s",
-        SysPathSleuth.__name__,
-        SysPathSleuth.relative_path(customize_path),
+        *get_name_and_relative_path(customize_path, syspath_sleuth_path),
     )
+
     lines: List[str]
-    lines, _ = inspect.getsourcelines(syspath_sleuth)
+
+    if syspath_sleuth_path:
+        with syspath_sleuth_path.open() as custom_syspath_sleuth:
+            lines = custom_syspath_sleuth.readlines()
+    else:
+        lines, _ = inspect.getsourcelines(syspath_sleuth)
 
     with customize_path.open("r+") as customize_path_f:
         customize_path_f.writelines(lines)
@@ -151,7 +156,20 @@ def get_system_customize_path() -> Path:
     raise InstallError("No system site found!")
 
 
-def inject_sleuth():
+def get_name_and_relative_path(customize_path: Path, syspath_sleuth_path: Optional[Path]):
+    if syspath_sleuth_path:
+        sleuth_name = syspath_sleuth_path.name
+        sleuth_path: Path = syspath_sleuth_path
+        if sleuth_path.is_relative_to(customize_path):
+            sleuth_path = syspath_sleuth_path.relative_to(customize_path)
+    else:
+        sleuth_name = SysPathSleuth.__name__
+        sleuth_path = SysPathSleuth.relative_path(customize_path)
+    return sleuth_name, sleuth_path
+
+
+def inject_sleuth(syspath_sleuth_path: Optional[Path] = None):
+
     # When using venv, site.ENABLE_USER_SITE is False. When using virtual environments,
     # the effort is to isolate the activities within one virtual environment per Python
     # system Python from other virtual environments. Were the user site enabled, it would
@@ -165,21 +183,22 @@ def inject_sleuth():
         customize_path = get_system_customize_path()
 
     if customize_path and customize_path.exists():
-        logger.warning(
-            "Reinstalling %s in %s site...",
-            SysPathSleuth.__name__,
-            "user" if user_path else "system",
-        )
+        name, _ = get_name_and_relative_path(customize_path, syspath_sleuth_path)
+        logger.warning("Reinstalling %s in %s site...", name, "user" if user_path else "system")
         reverse_patch_sleuth(customize_path)
 
     create_site_customize(customize_path)
     copy_site_customize(customize_path)
-    append_sleuth_to_customize(customize_path)
+    append_sleuth_to_customize(customize_path, syspath_sleuth_path)
     create_reverse_sleuth_patch(customize_path)
     if site.ENABLE_USER_SITE and site.check_enableusersite():
         reload(importlib.import_module("usercustomize"))
     else:
         reload(importlib.import_module("sitecustomize"))
+
+    if syspath_sleuth_path and not isinstance(SysPathSleuth, sys.path):
+        uninstall_sleuth()
+        raise InstallError("This source does not contain a SysPathSleuth.")
 
 
 def uninstall_sleuth():

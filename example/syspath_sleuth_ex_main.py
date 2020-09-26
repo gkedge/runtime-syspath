@@ -8,8 +8,14 @@ from runtime_syspath import syspath_sleuth
 
 logger: logging.Logger = logging.getLogger(__file__)
 LOGGER_LEVEL = logging.INFO
+CONSOLE_HANDLER: logging.Handler = logging.StreamHandler(sys.stdout)
 logger.setLevel(LOGGER_LEVEL)
+CONSOLE_HANDLER.setLevel(LOGGER_LEVEL)
+logger.addHandler(CONSOLE_HANDLER)
 
+# Inject SysPathSleuth to report any addition to sys.path. Repeated running removes and reinjects
+# SysPathSleuth as a means of altering SysPathSleuth and updating it. Unless there is a change,
+# the call is idempotent.
 syspath_sleuth.inject_sleuth()
 
 
@@ -28,6 +34,7 @@ def uninstall_syspath_sleuth():
     syspath_sleuth.uninstall_sleuth()
 
 
+# Best n
 atexit.register(uninstall_syspath_sleuth)
 
 if __name__ == "__main__":
@@ -42,10 +49,9 @@ if __name__ == "__main__":
     #     sys.exit("Expected sys.path to be monkey-patched.")
     # END Sanity Test
 
-    consoleHandler: logging.Handler = logging.StreamHandler(sys.stdout)
-    consoleHandler.setLevel(LOGGER_LEVEL)
-
-    sys.path.config_logger(handler=consoleHandler, level=LOGGER_LEVEL)
+    # Now that SysPathSleuth is in place to wrap 'sys.path', a log handler can be provided.
+    # If a log handler is not provided, SysPathSleuth will leverage 'print()'
+    sys.path.config_logger(handler=CONSOLE_HANDLER, level=LOGGER_LEVEL)
 
     import runtime_syspath
 
@@ -58,11 +64,13 @@ if __name__ == "__main__":
                 "\n\tno report of its addition will be made by "
                 "runtime_syspath.add_srcdirs_to_syspath()\n"
             )
+    # Search for all 'src' directories and add them to sys.path
     runtime_syspath.add_srcdirs_to_syspath()
 
     runtime_syspath.print_syspath(sort=False)
 
     import runtime_syspath_ex
 
+    # Call function in package initializer which will add a path to sys.path
     runtime_syspath_ex.go_main_go()
     runtime_syspath.print_syspath(sort=False)
