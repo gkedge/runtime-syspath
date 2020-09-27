@@ -173,4 +173,4 @@ Think along the lines of providing telemetry as long-running programs
 wheedle there ways over their execution paths using logger `Handler`
 that sending data to a service.
 
-See example uses in the `examples` subdirectory of this project.
+See example uses in the [`examples` subdirectory of this project](https://github.com/gkedge/runtime-syspath/tree/master/examples) .
