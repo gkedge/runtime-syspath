@@ -1,23 +1,28 @@
-`runtime-syspath` is a package to ease programmatically adding paths to
-`sys.path`. This is targeted at python test code that needs to discover
-a project's solution source to test.
+`runtime-syspath` is a package to ease programmatically adding src root
+paths to `sys.path`. This is targeted at python test code that needs to
+discover a project's solution source to test.
 
 > :exclamation: It is generally **frowned upon** to alter the `sys.path`
 > programmatically as it confuses development, especially refactoring.
-> Python IDEs can statically determine if a missing import needs to be
-> loaded from PyPi. That static *missing import* detection registers
+> Python IDEs can statically determine if a dependent package's import
+> statement is left wanting whether a PyPi installation in needed or
+> source cannot be discovered through standard Python paths. A static
+> analysis tool's *missing import* detection will end up registering
 > false-negatives if the import is discovered via dynamic (programmatic)
-> alterations of `sys.path` at runtime.
+> additions to `sys.path` at runtime.
 
 *The following description assumes the use of `pytest` unit testing
 support and a project file structuring that includes project root
 directories named `src` (project solution) and `tests` (project tests of
-project source under `src`. The `src` directory is-a package (contains
-`__init__py`) whereas `tests`, for simple 1-package project testing,
-tend to be flat and `pytest`'s
+project source under `src`. Both `src` and `tests` are not intended to
+have package initializers (`__init__.py`). Packages therein will
+typically have package initializers allowing for test modules to have
+that same name (in separate packages). However, as a general rule, test
+modules are not intended to import other test modules. Therefore, there
+should be no need for `__init__.py`-enabled, relative importation
+between test cases or sub-package test cases. `pytest`'s
 [default test discovery](https://docs.pytest.org/en/latest/goodpractices.html#test-discovery)
-negates the need for `tests` being a package (doesn't contain
-`__init__.py`):*
+and intended design use negates the need for :*
 
 ```
 ├─ src
@@ -25,14 +30,18 @@ negates the need for `tests` being a package (doesn't contain
 |  └─ foo.py
 ├─ tests
 │  └─ test_foo.py
+│     └─ foo_and_goo
+│        └─ __init__.py
+│        └─ test_foo.py
+│        └─ test_goo.py
 └─ setup.py
 ```
 *That structure is based upon
-[this guidance](https://blog.ionelmc.ro/2014/05/25/python-packaging/#the-structure).
-See considerations for alternate directory structures below.*
+[this guidance](https://blog.ionelmc.ro/2014/05/25/python-packaging/#the-structure).*
 
-When testing solution source in a project, the test cases can statically
-access the solution source by importing with the `src` package prefix:
+When testing solution source in a project, the test cases _could_
+statically access the solution source by importing with the `src`
+package prefix:
 
 ```
 import src.packagename.foo
@@ -47,18 +56,20 @@ So, using:
 import packagename.foo
 ```
 ... the `src` directory would need to be programmatically added to the
-`sys.path`. This will allow for tests to be run wherever the test module
-is under the `tests` sub-tree. `runtime_syspath` will discover all `src`
+`sys.path`. This will allow for tests to be run form any working
+directory under the `tests` sub-tree.
+
+`runtime_syspath.add_srcdirs_to_syspath()` will discover all `src`
 directories under `<project root>/src`. The reason that there may be
-more is if your project is using `git subprojects` under `<project
-root>/src` that have their own `src` directories. Those need to be added
-to `sys.path` also.
+more is if your project may be leveraging `git subprojects` under
+`<project root>/src` that have their own `src` directories. Those need
+to be added to `sys.path` also.
 
 To leverage `runtime-syspath` to add the `src` directory everytime a
-test is run, import and run `add_srcdirs_to_syspath` in
-`tests/conftest.py`. (If `tests` contain more `conftest.py` under its
-directory tree, the call still only need appear in the root
-`test/conftest.py`!):
+test is run, import `runtime-syspath` and run
+`add_srcdirs_to_syspath()` in `tests/conftest.py`. (If `tests`
+contain more `conftest.py` under its directory tree, the call still only
+need appear in the root `test/conftest.py`!):
  ```
  from runtime_syspath import add_srcdirs_to_syspath
  
@@ -94,7 +105,7 @@ directory trees:
 
 > :exclamation: Due to the code maintenance and grok'ing mayhem caused
 > by indiscriminate runtime additions to `sys.path`, your goal should be
-> to limit that anti-pattern to this discovery-of-source aspect for  
+> to limit that anti-pattern to this discovery-of-source aspect for
 > import discovery.
 
 > :bulb: Since programmatically adding to a `sys.path` impairs an IDE's
@@ -104,3 +115,62 @@ directory trees:
 > PyCharm example:
 >
 > ![image](docs/images/IDE_SetSrc.png)
+
+#### SysPathSleuth; runtime reporting of programmatic `sys.path` access
+
+On a project riddled with programmatically appending source paths to
+`sys.path`, a tool to discover which modules are mucking with `sys.path`
+and when could prove useful. This discovery can assist with manually
+eradicating `sys.path` access in favor of updating imports with
+fully-qualified (anchored at but, not including `src`), absolute
+module/package names. static tools would then be able to discover the
+modules/packages imported.
+> Relative paths: There is a place for relative paths when importing
+> intra-package modules. But, when importing inter-package modules,
+> leveraging fully-qualified, absolute module/package names is a wiser
+> play.
+
+SysPathSleuth is a monkey-patch of `sys.path` to report on `sys.path`
+access that comes with an installer to install/uninstall SysPathSleuth
+into either the user or system site's _customize_ modules
+(`~/pathto/user_site/usercustomize.py` or
+`/pathto/python/site-packages/sitecustomize.py`). SysPathSleuth can be
+installed/uninstalled using one of following option:
+1. `python -m syspath_sleuth \[--install _or_ --uninstall]`
+2. `syspath_sleuth_injector \[--install _or_ --uninstall]`
+3. at the start within a running program
+
+At the start of a running program prior:
+```
+import atexit
+import syspath_sleuth
+from runtime-syspath import syspath_slueth
+
+syspath_sleuth.inject_sleuth()
+def uninstall_syspath_sleuth():
+    syspath_sleuth.uninstall_sleuth()
+
+atexit.register(uninstall_syspath_sleuth)
+
+if __name__ == "__main__":
+    go_main_go()
+
+```
+
+It is possible to provide your own SysPathSleuth for more interesting
+data gathering using the CLI:
+
+```
+syspath_sleuth_injector --install --custom my_custom_syspath_sleuth.py
+```
+
+That file must have a class named `SysPathSleuth` and wrap the
+`sys.path` or the `syspath_sleuth_injector` will reject it. _See
+`src/runtime_syspath/syspath_sleuth/syspath_sleuth.py` for out-of-box
+implementation._
+
+Think along the lines of providing telemetry as long-running programs
+wheedle there ways over their execution paths using logger `Handler`
+that sending data to a service.
+
+See example uses in the `examples` subdirectory of this project.

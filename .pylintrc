@@ -1,25 +1,14 @@
-[MASTER]
-init-hook = 'from pylint.config import find_pylintrc; from pathlib import Path; import sys;
-            project_dir = Path(find_pylintrc()).parent;
-            sys.path.append(Path(project_dir, "src"));
-            sys.path.append(Path(project_dir, "tests/test_subproject/src"));
-            sys.path.append(Path(project_dir, "tests/test_subproject/test_subproject_subproject"))'
+[FORMAT]
+max-line-length = 100
 
-ignore = build,dist
-
-[MESSAGES CONTROL]
-disable = duplicate-code,invalid-name
-
-[SIMILARITIES]
-
-# Minimum lines number of a similarity.
-min-similarity-lines = 4
-
-# Ignore comments when computing similarities.
-ignore-comments = yes
-
-# Ignore docstrings when computing similarities.
-ignore-docstrings = yes
-
-# Ignore imports when computing similarities.
-ignore-imports = yes
+disable:
+    bad-continuation,
+    bad-whitespace,
+    import-error,
+    missing-module-docstring,
+    missing-function-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    no-self-use,
+    wrong-import-position,
+    duplicate-code,

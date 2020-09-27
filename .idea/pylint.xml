@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="PylintConfigService">
-    <option name="customPylintPath" value="$USER_HOME$/.local/share/virtualenvs/runtime-syspath-XkC2YlYn/bin/pylint" />
+    <option name="customPylintPath" value="$PROJECT_DIR$/.venv/bin/pylint" />
+    <option name="pylintArguments" value="src"/>
   </component>
 </project>
