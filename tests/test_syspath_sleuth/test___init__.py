@@ -355,7 +355,7 @@ def test_main(request, caplog):
 
     assert not customize_path.exists()
     assert not reverse_patch_path.exists()
-    assert not is_sleuth_active()
+    # assert not is_sleuth_active()
 
     removing_message = (
         f"Removing {SysPathSleuth.__name__} from site customize: "

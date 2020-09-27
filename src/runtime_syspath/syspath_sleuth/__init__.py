@@ -124,15 +124,16 @@ def reverse_patch_sleuth(customize_path):
         customize_path.unlink()
 
     try:
-        # pylint: disable=import-outside-toplevel
+        # pylint: disable=import-outside-toplevel,unused-import
         import sitecustomize
 
-        # pylint: enable=import-outside-toplevel
+        # pylint: enable=import-outside-toplevel,unused-import
 
-        sys.path = sys.path.get_base_list()
-        if isinstance(sys.path, sitecustomize.SysPathSleuth):
-            error_logger.warning("Hmmm... expected sys.path NOT to be monkey-patched.")
-
+    # This is too sketch...
+    #     sys.path = sys.path.get_base_list()
+    #     if isinstance(sys.path, sitecustomize.SysPathSleuth):
+    #         error_logger.warning("Hmmm... expected sys.path NOT to be monkey-patched.")
+    #
     except (AttributeError, ModuleNotFoundError):
         # This will occur if SysPathSleuth was not installed prior. But, don't skip the
         # uninstall_sleuth() as the user messaging associated with this condition is shared.
@@ -207,15 +208,14 @@ def inject_sleuth(syspath_sleuth_path: Optional[Path] = None):
     class_names: Tuple[str] = tuple(
         x[0] for x in inspect.getmembers(customize_module, inspect.isclass)
     )
-    if syspath_sleuth_path and (
-        "SysPathSleuth" not in class_names
-        or not isinstance(sys.path, customize_module.SysPathSleuth)
+    if "SysPathSleuth" not in class_names or not isinstance(
+        sys.path, customize_module.SysPathSleuth
     ):
         # The file loaded doesn't wrap sys.path with a SysPathSleuth
         sleuth_logger.setLevel(logging.ERROR)
         reverse_patch_sleuth(customize_path)
-        relative_path = get_relative_path(syspath_sleuth_path)
-        raise InstallError(f"{relative_path} does not wrap sys.path with a SysPathSleuth.")
+        _, sleuth_path = get_name_and_relative_path(customize_path, syspath_sleuth_path)
+        raise InstallError(f"{sleuth_path} does not wrap sys.path with a SysPathSleuth.")
 
 
 def uninstall_sleuth():
@@ -280,15 +280,16 @@ def syspath_sleuth_main(inject: bool, custom: str, verbose: bool):
             # sys.path.append('yow')
         else:
             try:
-                # pylint: disable=import-outside-toplevel
+                # pylint: disable=import-outside-toplevel,unused-import
                 import sitecustomize
 
-                # pylint: enable=import-outside-toplevel
+                # pylint: enable=import-outside-toplevel,unused-import
 
-                sys.path = sys.path.get_base_list()
-                if isinstance(sys.path, sitecustomize.SysPathSleuth):
-                    error_logger.warning("Hmmm... expected sys.path NOT to be monkey-patched.")
-
+            # This so sketch...
+            #     sys.path = sys.path.get_base_list()
+            #     if isinstance(sys.path, sitecustomize.SysPathSleuth):
+            #         error_logger.warning("Hmmm... expected sys.path NOT to be monkey-patched.")
+            #
             except (AttributeError, ModuleNotFoundError):
                 # This will occur if SysPathSleuth was not installed prior. But, don't skip the
                 # uninstall_sleuth() as the user messaging associated with this condition is shared.
@@ -296,4 +297,4 @@ def syspath_sleuth_main(inject: bool, custom: str, verbose: bool):
 
             uninstall_sleuth()
     except Exception as ex:
-        error_logger.error("%s failed: %s", 'Inject' if inject else 'Uninstall', ex)
+        error_logger.error("%s failed: %s", "Inject" if inject else "Uninstall", ex)

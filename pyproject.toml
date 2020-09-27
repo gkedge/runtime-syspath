@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "runtime-syspath"
-version = "0.2.8"
+version = "0.2.9"
 authors = ["Greg Kedge <gregwork@kedges.com>"]
 description = "Functions show and find each 'src' directory under working directory and add each to sys.path."
 readme = "README.md"
