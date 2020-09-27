@@ -16,6 +16,8 @@ logger.addHandler(CONSOLE_HANDLER)
 # Inject SysPathSleuth to report any addition to sys.path. Repeated running removes and reinjects
 # SysPathSleuth as a means of altering SysPathSleuth and updating it. Unless there is a change,
 # the call is idempotent.
+
+# syspath_sleuth.inject_sleuth(Path('/pathto/custom_syspath_sleuth.py'))
 syspath_sleuth.inject_sleuth()
 
 
@@ -34,7 +36,7 @@ def uninstall_syspath_sleuth():
     syspath_sleuth.uninstall_sleuth()
 
 
-# Best n
+# Best keep it clean to avoid surprises
 atexit.register(uninstall_syspath_sleuth)
 
 if __name__ == "__main__":

@@ -135,9 +135,10 @@ access that comes with an installer to install/uninstall SysPathSleuth
 into either the user or system site's _customize_ modules
 (`~/pathto/user_site/usercustomize.py` or
 `/pathto/python/site-packages/sitecustomize.py`). SysPathSleuth can be
-installed/uninstalled using:
-* python -m syspath_slueth \[--install _or_ --uninstall]
-* at the start within a running program
+installed/uninstalled using one of following option:
+1. `python -m syspath_sleuth \[--install _or_ --uninstall]`
+2. `syspath_sleuth_injector \[--install _or_ --uninstall]`
+3. at the start within a running program
 
 At the start of a running program prior:
 ```
@@ -155,3 +156,21 @@ if __name__ == "__main__":
     go_main_go()
 
 ```
+
+It is possible to provide your own SysPathSleuth for more interesting
+data gathering using the CLI:
+
+```
+syspath_sleuth_injector --install --custom my_custom_syspath_sleuth.py
+```
+
+That file must have a class named `SysPathSleuth` and wrap the
+`sys.path` or the `syspath_sleuth_injector` will reject it. _See
+`src/runtime_syspath/syspath_sleuth/syspath_sleuth.py` for out-of-box
+implementation._
+
+Think along the lines of providing telemetry as long-running programs
+wheedle there ways over their execution paths using logger `Handler`
+that sending data to a service.
+
+See example uses in the `examples` subdirectory of this project.
