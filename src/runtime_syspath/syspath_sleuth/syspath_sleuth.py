@@ -1,5 +1,6 @@
 import inspect
 import logging
+import os
 import site
 import sys
 from pathlib import Path, PurePath
@@ -111,8 +112,17 @@ class SysPathSleuth(list):
         # Do both so report informs user whether it has been installed both.
         is_active_in_user_site = cls._is_active_in_user_site(sleuth_module_file_name)
         is_active_in_system_site = cls._is_active_in_system_site(sleuth_module_file_name)
+        is_syspath_sleuth_kill = False
+        if is_active_in_user_site or is_active_in_system_site:
+            is_syspath_sleuth_kill = os.getenv("SYSPATH_SLEUTH_KILL") is not None
+            if is_syspath_sleuth_kill:
+                cls._inform_user(
+                    f"SysPathSleuth is installed in site customize, "
+                    f"but disabled due to $SYSPATH_SLEUTH_KILL env var: "
+                    f"{is_syspath_sleuth_kill}"
+                )
 
-        return is_active_in_user_site or is_active_in_system_site
+        return not is_syspath_sleuth_kill and (is_active_in_user_site or is_active_in_system_site)
 
     @staticmethod
     def get_user_customize_path() -> Path:

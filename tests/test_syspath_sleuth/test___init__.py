@@ -1,86 +1,30 @@
-import argparse
+import importlib
 import inspect
 import logging
+import os
 import re
 import site
+import sys
+from importlib import reload
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import pytest
-from _pytest.capture import CaptureResult
 from _pytest.fixtures import FixtureRequest
-import runtime_syspath
+from click.testing import CliRunner, Result
 
+import runtime_syspath
 from runtime_syspath import syspath_sleuth
 from runtime_syspath.syspath_sleuth import SysPathSleuth
 
 
-def test_parse_args_install():
-    parser = argparse.ArgumentParser()
-    arg_namespace: argparse.Namespace = syspath_sleuth.parse_syspath_sleuth_args(["-i"], parser)
-
-    assert arg_namespace is not None and arg_namespace.install
-
-    parser = argparse.ArgumentParser()
-    arg_namespace: argparse.Namespace = syspath_sleuth.parse_syspath_sleuth_args(
-        ["--install"], parser
-    )
-
-    assert arg_namespace is not None and arg_namespace.install
-
-
-def test_parse_args_uninstall():
-    parser = argparse.ArgumentParser()
-    arg_namespace: argparse.Namespace = syspath_sleuth.parse_syspath_sleuth_args(["-u"], parser)
-
-    assert arg_namespace is not None and arg_namespace.uninstall
-
-    parser = argparse.ArgumentParser()
-    arg_namespace: argparse.Namespace = syspath_sleuth.parse_syspath_sleuth_args(
-        ["--uninstall"], parser
-    )
-
-    assert arg_namespace is not None and arg_namespace.uninstall
-
-
-def test_parse_args_help(capsys):
-    try:
-        syspath_sleuth.parse_syspath_sleuth_args(["-h"], argparse.ArgumentParser())
-
-        pytest.fail("'-h' should exit.")
-    except SystemExit:
-        result: CaptureResult = capsys.readouterr()
-        assert "usage:" in result.out and "(-i | -u)" in result.out
-        assert (
-            f"-i, --install    Install {SysPathSleuth.__name__} to user-site if available, else"
-            in result.out
-        )
-        assert (
-            f"-u, --uninstall  Uninstall {SysPathSleuth.__name__} from both user-site and/or "
-            "system-" in result.out
-        )
-
-
-def test_parse_args_bad(capsys):
-    try:
-        argparse.Namespace = syspath_sleuth.parse_syspath_sleuth_args(
-            None, argparse.ArgumentParser()
-        )
-        pytest.fail("At lease one arg is required.")
-    except SystemExit:
-        result: CaptureResult = capsys.readouterr()
-        assert "usage:" in result.err and "(-i | -u)" in result.err
-        assert "error: one of the arguments -i/--install -u/--uninstall is required" in result.err
-
-    try:
-        syspath_sleuth.parse_syspath_sleuth_args(["-i", "-u"], argparse.ArgumentParser())
-        pytest.fail("'-i' and '-u' are mutually exclusive.")
-    except SystemExit:
-        result: CaptureResult = capsys.readouterr()
-        assert "usage:" in result.err and "(-i | -u)" in result.err
-        assert (
-            "error: argument -u/--uninstall: not allowed with argument -i/--install" in result.err
-        )
+def test_parse_args_help():
+    runner = CliRunner()
+    result: Result = runner.invoke(syspath_sleuth.syspath_sleuth_main, ["--help"])
+    assert "Usage:" in result.stdout
+    assert "-i, --inject" in result.stdout and "-u, --uninstall" in result.stdout
+    assert "-c, --custom" in result.stdout
+    assert "-v, --verbose" in result.stdout
 
 
 def test_get_system_customize_path():
@@ -385,10 +329,15 @@ def test_main(request, caplog):
     request.addfinalizer(finalizer=fin)
     fin()  # run ahead in case failed tests left junk
 
-    syspath_sleuth.syspath_sleuth_main(["-i"])
+    runner = CliRunner()
+    runner.invoke(syspath_sleuth.syspath_sleuth_main, ["-i"])
     assert customize_path.exists() and customize_path.stat().st_size != 0
     assert reverse_patch_path.exists() and reverse_patch_path.stat().st_size != 0
     assert not copied_customize_path.exists()
+    assert is_sleuth_active(), (
+        f"SysPathSleuth is not active, $SYSPATH_SLEUTH_KILL enabled?: "
+        f"{os.getenv('SYSPATH_SLEUTH_KILL') is not None}"
+    )
 
     creating_message = "Creating system site sitecustomize.py"
     append_message = (
@@ -402,9 +351,11 @@ def test_main(request, caplog):
 
     caplog.clear()
 
-    syspath_sleuth.syspath_sleuth_main(["-u"])
+    runner.invoke(syspath_sleuth.syspath_sleuth_main, ["-u"])
+
     assert not customize_path.exists()
     assert not reverse_patch_path.exists()
+    assert not is_sleuth_active()
 
     removing_message = (
         f"Removing {SysPathSleuth.__name__} from site customize: "
@@ -416,15 +367,36 @@ def test_main(request, caplog):
         assert record.levelname == "INFO", "Did not find expected log record level."
 
 
+def is_sleuth_active():
+    if site.ENABLE_USER_SITE and site.check_enableusersite():
+        customize_module = importlib.import_module("usercustomize")
+    else:
+        customize_module = importlib.import_module("sitecustomize")
+    reload(customize_module)
+    class_names: Tuple[str] = tuple(
+        x[0] for x in inspect.getmembers(customize_module, inspect.isclass)
+    )
+    is_sleuth_active_now = "SysPathSleuth" in class_names and isinstance(
+        sys.path, customize_module.SysPathSleuth
+    )
+    return is_sleuth_active_now
+
+
 def test_live_report(request: FixtureRequest, testdir):
     test_case_name = request.node.name
 
     def fin():
-        syspath_sleuth.syspath_sleuth_main(["-u"])
+        runner.invoke(syspath_sleuth.syspath_sleuth_main, ["-u"])
 
     request.addfinalizer(finalizer=fin)
 
-    syspath_sleuth.syspath_sleuth_main(["-i"])
+    runner = CliRunner()
+    runner.invoke(syspath_sleuth.syspath_sleuth_main, ["-i"])
+    assert is_sleuth_active(), (
+        f"SysPathSleuth is not active, $SYSPATH_SLEUTH_KILL enabled?: "
+        f"{os.getenv('SYSPATH_SLEUTH_KILL') is not None}"
+    )
+
     temp_test_py_file = testdir.makepyfile(
         """
         import sys

@@ -1,4 +1,3 @@
-import argparse
 import importlib
 import inspect
 import logging
@@ -7,8 +6,10 @@ import site
 import sys
 from importlib import reload
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import List, Optional, Tuple
 
+import click
+import importlib_metadata
 from diff_match_patch import diff_match_patch, patch_obj
 
 from . import syspath_sleuth
@@ -17,7 +18,11 @@ from .syspath_sleuth import SysPathSleuth
 PRE_SLEUTH_SUFFIX = ".pre_sleuth"
 REVERSE_PATCH_SUFFIX = ".patch"
 
-logger: logging.Logger = logging.getLogger(__name__)
+error_logger: logging.Logger = logging.getLogger(f"{__name__}.error")
+error_logger.addHandler(logging.StreamHandler(sys.stderr))
+
+sleuth_logger: logging.Logger = logging.getLogger(error_logger.parent.name)
+sleuth_logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 class InstallError(RuntimeError):
@@ -28,33 +33,8 @@ class UninstallError(RuntimeError):
     pass
 
 
-def parse_syspath_sleuth_args(
-    args: Optional[Sequence[str]] = None, parser: argparse.ArgumentParser = None
-):
-    """Parse command line arguments, return argparse namespace."""
-    if not parser:
-        parser = argparse.ArgumentParser(
-            description=f"(Un)Install {SysPathSleuth.__name__} into user-site or system-site "
-            f"to track sys.path access in real-time."
-        )
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "-i",
-        "--install",
-        action="store_true",
-        help=f"Install {SysPathSleuth.__name__} to user-site if available, else system-site",
-    )
-    group.add_argument(
-        "-u",
-        "--uninstall",
-        action="store_true",
-        help=f"Uninstall {SysPathSleuth.__name__} from both user-site and/or system-site",
-    )
-    return parser.parse_args(args)
-
-
 def append_sleuth_to_customize(customize_path: Path, syspath_sleuth_path: Optional[Path] = None):
-    logger.info(
+    sleuth_logger.info(
         "Appending %s to site customize: %s",
         *get_name_and_relative_path(customize_path, syspath_sleuth_path),
     )
@@ -72,7 +52,7 @@ def append_sleuth_to_customize(customize_path: Path, syspath_sleuth_path: Option
 
 
 def create_site_customize(customize_path: Path):
-    logger.info("Creating system site %s", customize_path.name)
+    sleuth_logger.info("Creating system site %s", customize_path.name)
     customize_path.touch()
 
 
@@ -110,7 +90,7 @@ def reverse_patch_sleuth(customize_path):
     if not reverse_patch_path.exists():
         return
 
-    logger.info(
+    sleuth_logger.info(
         "Removing %s from site customize: %s",
         SysPathSleuth.__name__,
         SysPathSleuth.relative_path(customize_path),
@@ -143,6 +123,21 @@ def reverse_patch_sleuth(customize_path):
     if not save_patched:
         customize_path.unlink()
 
+    try:
+        # pylint: disable=import-outside-toplevel
+        import sitecustomize
+
+        # pylint: enable=import-outside-toplevel
+
+        sys.path = sys.path.get_base_list()
+        if isinstance(sys.path, sitecustomize.SysPathSleuth):
+            error_logger.warning("Hmmm... expected sys.path NOT to be monkey-patched.")
+
+    except (AttributeError, ModuleNotFoundError):
+        # This will occur if SysPathSleuth was not installed prior. But, don't skip the
+        # uninstall_sleuth() as the user messaging associated with this condition is shared.
+        pass
+
 
 def get_user_customize_path():
     return Path(site.getusersitepackages()) / "usercustomize.py"
@@ -156,16 +151,25 @@ def get_system_customize_path() -> Path:
     raise InstallError("No system site found!")
 
 
-def get_name_and_relative_path(customize_path: Path, syspath_sleuth_path: Optional[Path]):
+def get_name_and_relative_path(
+    customize_path: Path, syspath_sleuth_path: Optional[Path]
+) -> Tuple[str, Path]:
     if syspath_sleuth_path:
         sleuth_name = syspath_sleuth_path.name
-        sleuth_path: Path = syspath_sleuth_path
-        if sleuth_path.is_relative_to(customize_path):
-            sleuth_path = syspath_sleuth_path.relative_to(customize_path)
+        sleuth_path: Path = get_relative_path(customize_path)
     else:
         sleuth_name = SysPathSleuth.__name__
         sleuth_path = SysPathSleuth.relative_path(customize_path)
     return sleuth_name, sleuth_path
+
+
+def get_relative_path(path: Path) -> Path:
+    sleuth_path: Path = path
+    try:
+        sleuth_path = path.relative_to(Path.cwd())
+    except ValueError:
+        pass
+    return sleuth_path
 
 
 def inject_sleuth(syspath_sleuth_path: Optional[Path] = None):
@@ -184,21 +188,34 @@ def inject_sleuth(syspath_sleuth_path: Optional[Path] = None):
 
     if customize_path and customize_path.exists():
         name, _ = get_name_and_relative_path(customize_path, syspath_sleuth_path)
-        logger.warning("Reinstalling %s in %s site...", name, "user" if user_path else "system")
+        sleuth_logger.warning(
+            "Reinstalling %s in %s site...", name, "user" if user_path else "system"
+        )
         reverse_patch_sleuth(customize_path)
 
     create_site_customize(customize_path)
     copy_site_customize(customize_path)
     append_sleuth_to_customize(customize_path, syspath_sleuth_path)
     create_reverse_sleuth_patch(customize_path)
-    if site.ENABLE_USER_SITE and site.check_enableusersite():
-        reload(importlib.import_module("usercustomize"))
-    else:
-        reload(importlib.import_module("sitecustomize"))
 
-    if syspath_sleuth_path and not isinstance(SysPathSleuth, sys.path):
-        uninstall_sleuth()
-        raise InstallError("This source does not contain a SysPathSleuth.")
+    # Determine if the customize site was updated to wrap sys.path with a SysPathSleuth.
+    if site.ENABLE_USER_SITE and site.check_enableusersite():
+        customize_module = importlib.import_module("usercustomize")
+    else:
+        customize_module = importlib.import_module("sitecustomize")
+    reload(customize_module)
+    class_names: Tuple[str] = tuple(
+        x[0] for x in inspect.getmembers(customize_module, inspect.isclass)
+    )
+    if syspath_sleuth_path and (
+        "SysPathSleuth" not in class_names
+        or not isinstance(sys.path, customize_module.SysPathSleuth)
+    ):
+        # The file loaded doesn't wrap sys.path with a SysPathSleuth
+        sleuth_logger.setLevel(logging.ERROR)
+        reverse_patch_sleuth(customize_path)
+        relative_path = get_relative_path(syspath_sleuth_path)
+        raise InstallError(f"{relative_path} does not wrap sys.path with a SysPathSleuth.")
 
 
 def uninstall_sleuth():
@@ -214,7 +231,7 @@ def uninstall_sleuth():
         customize_path = get_system_customize_path()
 
     if not customize_path.exists():
-        logger.warning(
+        error_logger.warning(
             "%s was not installed in %s site: %s",
             SysPathSleuth.__name__,
             "user" if user_path else "system",
@@ -224,7 +241,7 @@ def uninstall_sleuth():
 
     reverse_patch_sleuth(customize_path)
 
-    logger.warning(
+    sleuth_logger.warning(
         "%s uninstalled from %s site: %s",
         SysPathSleuth.__name__,
         "user" if user_path else "system",
@@ -232,37 +249,51 @@ def uninstall_sleuth():
     )
 
 
-def syspath_sleuth_main(args: Optional[Sequence[str]] = None):
-    args_namespace: argparse.Namespace = parse_syspath_sleuth_args(args)
+@click.command(
+    help="(Un)Install SysPathSleuth into user-site or system-site to track sys.path "
+    "access in real-time."
+)
+@click.version_option(version=importlib_metadata.version("runtime-syspath"))
+@click.option("--inject/--uninstall", "-i/-u", default=False, help="default=uninstall")
+@click.option(
+    "--custom",
+    "-c",
+    type=click.Path(exists=True, resolve_path=True),
+    help="path to a user's implementation of a SysPathSleuth",
+)
+@click.option("--verbose", "-v", is_flag=True, default=False)
+def syspath_sleuth_main(inject: bool, custom: str, verbose: bool):
+    custom_path: Optional[Path] = Path(custom) if custom else None
+    if verbose:
+        sleuth_logger.setLevel(logging.INFO)
+        for handler in sleuth_logger.handlers:
+            handler.setLevel(logging.INFO)
 
-    if args_namespace.install:
-        inject_sleuth()
+    # pylint: disable=broad-except
+    try:
+        if inject:
+            inject_sleuth(custom_path)
 
-        # handler = logging.StreamHandler(sys.stdout)
-        # handler.setLevel(logging.INFO)
-        # sys.path.config_logger(handler, logging.INFO)
-        # sys.path.append('yow')
-    elif args_namespace.uninstall:
-        try:
-            # pylint: disable=import-outside-toplevel
-            import sitecustomize
+            # handler = logging.StreamHandler(sys.stdout)
+            # handler.setLevel(logging.INFO)
+            # sys.path.config_logger(handler, logging.INFO)
+            # sys.path.append('yow')
+        else:
+            try:
+                # pylint: disable=import-outside-toplevel
+                import sitecustomize
 
-            # pylint: enable=import-outside-toplevel
+                # pylint: enable=import-outside-toplevel
 
-            # Removing the monkey-patch seems rife with pending disaster if used during running
-            # execution and not about to exit (like this installer is about to), and in that case,
-            # is it really worth it(?). But, it seems to work, doing it in your own
-            # implementation, YMMV.
-            sys.path = sys.path.get_base_list()
-            if isinstance(sys.path, sitecustomize.SysPathSleuth):
-                print("Hmmm... expected sys.path NOT to be monkey-patched.")
+                sys.path = sys.path.get_base_list()
+                if isinstance(sys.path, sitecustomize.SysPathSleuth):
+                    error_logger.warning("Hmmm... expected sys.path NOT to be monkey-patched.")
 
-        except (AttributeError, ModuleNotFoundError):
-            # This will occur if SysPathSleuth was not installed prior. But, don't skip the
-            # uninstall_sleuth() as the user messaging associated with this condition is shared.
-            pass
+            except (AttributeError, ModuleNotFoundError):
+                # This will occur if SysPathSleuth was not installed prior. But, don't skip the
+                # uninstall_sleuth() as the user messaging associated with this condition is shared.
+                pass
 
-        uninstall_sleuth()
-
-    else:
-        raise InstallError("Not install or uninstall? Confused")
+            uninstall_sleuth()
+    except Exception as ex:
+        error_logger.error("%s failed: %s", 'Inject' if inject else 'Uninstall', ex)

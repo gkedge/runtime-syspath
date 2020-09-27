@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "runtime-syspath"
-version = "0.2.1b"
+version = "0.2.8"
 authors = ["Greg Kedge <gregwork@kedges.com>"]
 description = "Functions show and find each 'src' directory under working directory and add each to sys.path."
 readme = "README.md"
@@ -26,9 +26,14 @@ classifiers = [
 [tool.poetry.build]
 generate-setup-file = false
 
+[tool.poetry.scripts]
+syspath_sleuth_injector = "runtime_syspath.syspath_sleuth.__main__:syspath_sleuth_main"
+
 [tool.poetry.dependencies]
 python = "^3.7"
 diff-match-patch = "^20200713"
+click = "^7.1.2"
+importlib-metadata = "^2.0.0"
 
 [tool.poetry.dev-dependencies]
 black = { version = "^20.8b1", extras = ["d"] }

@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="run_syspath_sleuth_installer" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="run_syspath_sleuth_installer (mod/uninstall)" type="PythonConfigurationType" factoryName="Python">
     <module name="runtime-syspath" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
