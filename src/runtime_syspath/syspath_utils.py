@@ -1,10 +1,14 @@
-""" add_srcdirs_to_syspath module. """
+""" syspath_utils module. """
+import os
 import re
 import sys
 from itertools import chain
 from pathlib import Path
+from shutil import rmtree
 from types import ModuleType
 from typing import Generator, List, Optional, Pattern, Set, Tuple, Union
+
+from .syspath_path_utils import get_project_root_dir
 
 _STD_SYSPATH_FILTER: Union[None, Pattern] = None
 
@@ -27,7 +31,7 @@ def filtered_sorted_syspath(
     path_filter: Pattern = None, no_filtering: bool = False, sort: bool = False
 ) -> List[str]:
     """
-    Filter and sort the syspath for only paths of interest.
+    Filter and sort the sys.path for only paths of interest.
     :param path_filter: a pattern that the user can provide in addition to the std_syspath_filter
     :param no_filtering: allow user to not filter at all
     :param sort: allow user to sort the filtered (if filtering) sys.path
@@ -48,7 +52,7 @@ def print_syspath(
     path_filter: Pattern = None, no_filtering: bool = False, sort: bool = True
 ) -> None:
     """
-    Filter and sort the syspath for only paths of interest.
+    Filter and sort the sys.path for only paths of interest.
     :param path_filter: a pattern that the user can provide in addition to the std_syspath_filter
     :param no_filtering: allow user to not filter at all
     :param sort: allow user to sort the filtered (if filtering) sys.path
@@ -59,6 +63,63 @@ def print_syspath(
     path: str
     for path in paths:
         print(f"\t{path}")
+
+
+def persist_syspath(force: bool = False, path_filter: Pattern = None) -> None:
+    """
+    Persist a set of ordered [000-999]*.pth.template files that represent each
+    project-related entry in the sys.path. The files are persisted into the
+    /pathto/projectroot/pths directory.
+
+    :param force: for directory creation
+    :param path_filter: a pattern that the user can provide in addition to the std_syspath_filter
+    :return: None
+    """
+    paths: List[str] = filtered_sorted_syspath(path_filter)
+    root_dir = Path(get_project_root_dir())
+
+    print(f"Project root: {root_dir}")
+    persist_dir: Path = root_dir / "pths"
+
+    if not persist_dir.exists():
+        create = force or input(f"Create {persist_dir}? [y,n] ").strip().lower().startswith("y")
+        if create:
+            persist_dir.mkdir(mode=0o766)
+
+    for path in persist_dir.glob("**/*"):
+        if path.is_file():
+            path.unlink()
+        elif path.is_dir():
+            rmtree(path)
+
+    for index in range(0, len(paths)):
+        path_str = sys.path[index]
+        if path_str.startswith(os.fspath(root_dir)):
+            pth_path = Path(path_str)
+            relative_pth = pth_path.relative_to(root_dir)
+            persist_path = Path(
+                persist_dir,
+                f"{index:03d}_{root_dir.stem}_"
+                f"{os.fspath(relative_pth).replace(os.sep, '_')}.pth.template",
+            )
+
+            if not persist_path.exists():
+                with persist_path.open("x") as persist_path_f:
+                    persist_path_f.write(
+                        f"${{path-to-project}}{os.sep}"
+                        f"{os.fspath(pth_path.relative_to(root_dir.parent))}\n"
+                    )
+
+
+def inject_project_pths_to_site(path_to_project: Path = None):
+    """
+    Iterate through all templates in /pathto/projectroot/pths converting the templates to
+    the paths rooted to the current /pathto/projectroot.
+
+    :param path_to_project:
+    :return:
+    """
+    pass
 
 
 def add_srcdirs_to_syspath() -> None:
@@ -76,7 +137,7 @@ def add_srcdirs_to_syspath() -> None:
 
     :return: None
     """
-    root_path: Path = Path.cwd()
+    root_path: Path = Path(get_project_root_dir())
 
     while not (root_path / "src").exists() or not (root_path / "src").is_dir():
         if not root_path.parent:

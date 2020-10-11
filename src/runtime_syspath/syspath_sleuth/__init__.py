@@ -177,8 +177,8 @@ def inject_sleuth(syspath_sleuth_path: Optional[Path] = None):
 
     # When using venv, site.ENABLE_USER_SITE is False. When using virtual environments,
     # the effort is to isolate the activities within one virtual environment per Python
-    # system Python from other virtual environments. Were the user site enabled, it would
-    # affect other Python virtual environments.
+    # system from other virtual environments. Were the user site enabled within a virtual
+    # environment, it would affect other Python virtual environments.
     user_path = False
     if site.ENABLE_USER_SITE and site.check_enableusersite():
         customize_path = get_user_customize_path()
@@ -262,7 +262,7 @@ def uninstall_sleuth():
     help="path to a user's implementation of a SysPathSleuth",
 )
 @click.option("--verbose", "-v", is_flag=True, default=False)
-def syspath_sleuth_main(inject: bool, custom: str, verbose: bool):
+def syspath_sleuth_main(inject: bool, custom: Optional[str], verbose: Optional[bool]):
     custom_path: Optional[Path] = Path(custom) if custom else None
     if verbose:
         sleuth_logger.setLevel(logging.INFO)

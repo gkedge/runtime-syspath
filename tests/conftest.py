@@ -1,4 +1,5 @@
 """ pytest configuration for this directory (and their sub-directories)"""
+import os
 import sys
 from pathlib import Path
 
@@ -27,8 +28,8 @@ def get_root_path() -> Path:
     return root_path
 
 
-sys.path.append(str(get_root_path() / "src"))
-sys.path.append(str(get_root_path() / "tests" / "test_subproject" / "src"))
+sys.path.append(os.fspath(get_root_path() / "src"))
+sys.path.append(os.fspath(get_root_path() / "tests" / "test_subproject" / "src"))
 
 
 @pytest.fixture(name="root_path")

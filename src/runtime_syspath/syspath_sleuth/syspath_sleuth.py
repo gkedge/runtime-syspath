@@ -41,6 +41,41 @@ class SysPathSleuth(list):
         self._where("__setitem__", args)
         return super().__setitem__(*args)
 
+    @classmethod
+    def is_sleuth_active(cls):
+        sleuth_module_file_name = PurePath(__file__).name
+        # Do both so report informs user whether it has been installed both.
+        is_active_in_user_site = cls._is_active_in_user_site(sleuth_module_file_name)
+        is_active_in_system_site = cls._is_active_in_system_site(sleuth_module_file_name)
+        is_syspath_sleuth_kill = False
+        if is_active_in_user_site or is_active_in_system_site:
+            is_syspath_sleuth_kill = os.getenv("SYSPATH_SLEUTH_KILL") is not None
+            if is_syspath_sleuth_kill:
+                cls._inform_user(
+                    f"SysPathSleuth is installed in site customize, "
+                    f"but disabled due to $SYSPATH_SLEUTH_KILL env var: "
+                    f"{is_syspath_sleuth_kill}"
+                )
+
+        return not is_syspath_sleuth_kill and (is_active_in_user_site or is_active_in_system_site)
+
+    @staticmethod
+    def relative_path(customize_path):
+        try:
+            customize_path = customize_path.relative_to(sys.base_prefix)
+        except ValueError:
+            customize_path_orig = customize_path
+            cwd = Path.cwd()
+            while customize_path == customize_path_orig:
+                try:
+                    customize_path = customize_path.relative_to(cwd)
+                    break
+                except ValueError:
+                    if str(cwd) == "/":
+                        break
+                    cwd = cwd.parent
+        return customize_path
+
     def get_base_list(self) -> List[str]:
         return list(self)
 
@@ -106,32 +141,14 @@ class SysPathSleuth(list):
         else:
             print(message)
 
-    @classmethod
-    def is_sleuth_active(cls):
-        sleuth_module_file_name = PurePath(__file__).name
-        # Do both so report informs user whether it has been installed both.
-        is_active_in_user_site = cls._is_active_in_user_site(sleuth_module_file_name)
-        is_active_in_system_site = cls._is_active_in_system_site(sleuth_module_file_name)
-        is_syspath_sleuth_kill = False
-        if is_active_in_user_site or is_active_in_system_site:
-            is_syspath_sleuth_kill = os.getenv("SYSPATH_SLEUTH_KILL") is not None
-            if is_syspath_sleuth_kill:
-                cls._inform_user(
-                    f"SysPathSleuth is installed in site customize, "
-                    f"but disabled due to $SYSPATH_SLEUTH_KILL env var: "
-                    f"{is_syspath_sleuth_kill}"
-                )
-
-        return not is_syspath_sleuth_kill and (is_active_in_user_site or is_active_in_system_site)
-
     @staticmethod
-    def get_user_customize_path() -> Path:
+    def _get_user_customize_path() -> Path:
         user_customize_module_name = PurePath("usercustomize.py")
         user_customize_path = Path(site.getusersitepackages()) / user_customize_module_name
         return user_customize_path
 
     @staticmethod
-    def get_system_customize_path() -> Optional[Path]:
+    def _get_system_customize_path() -> Optional[Path]:
         site_customize_module_name = PurePath("sitecustomize.py")
 
         system_site: str
@@ -140,23 +157,6 @@ class SysPathSleuth(list):
             if system_site_path.name == "site-packages" and system_site_path.is_dir():
                 return system_site_path / site_customize_module_name
         return None
-
-    @staticmethod
-    def relative_path(customize_path):
-        try:
-            customize_path = customize_path.relative_to(sys.base_prefix)
-        except ValueError:
-            customize_path_orig = customize_path
-            cwd = Path.cwd()
-            while customize_path == customize_path_orig:
-                try:
-                    customize_path = customize_path.relative_to(cwd)
-                    break
-                except ValueError:
-                    if str(cwd) == "/":
-                        break
-                    cwd = cwd.parent
-        return customize_path
 
     @classmethod
     def _is_active_in_user_site(cls, sleuth_module_file_name):
@@ -171,7 +171,7 @@ class SysPathSleuth(list):
             # It is likely syspath_sleuth.py is being tested
             return False
 
-        user_customize_path = cls.get_user_customize_path()
+        user_customize_path = cls._get_user_customize_path()
         if not user_customize_path.exists():
             return False
         user_customize_path = cls.relative_path(user_customize_path)
@@ -185,7 +185,7 @@ class SysPathSleuth(list):
             # It is likely syspath_sleuth.py is being tested
             return False
 
-        system_custom_path = cls.get_system_customize_path()
+        system_custom_path = cls._get_system_customize_path()
         if not system_custom_path or not system_custom_path.exists():
             return False
 
