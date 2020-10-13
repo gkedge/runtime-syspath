@@ -3,10 +3,11 @@ import os
 import re
 import sys
 from itertools import chain
-from pathlib import Path
+from pathlib import Path, PurePath
 from shutil import rmtree
+from string import Template
 from types import ModuleType
-from typing import Generator, List, Optional, Pattern, Set, Tuple, Union
+from typing import Dict, Generator, List, Optional, Pattern, Set, Tuple, Union
 
 from .syspath_path_utils import get_project_root_dir
 
@@ -65,21 +66,25 @@ def print_syspath(
         print(f"\t{path}")
 
 
-def persist_syspath(force: bool = False, path_filter: Pattern = None) -> None:
+def persist_syspath(
+    user_provided_project_root_dir: Path = None, force: bool = False, path_filter: Pattern = None
+) -> None:
     """
     Persist a set of ordered [000-999]*.pth.template files that represent each
     project-related entry in the sys.path. The files are persisted into the
-    /pathto/projectroot/pths directory.
+    /pathto/projectroot/pths directory. If caller did not supply the /pathto/projectroot via
+    'user_provided_project_root_dir', attempt to determine that.
 
+    :param user_provided_project_root_dir: root of project using persist_syspath()
     :param force: for directory creation
     :param path_filter: a pattern that the user can provide in addition to the std_syspath_filter
     :return: None
     """
-    paths: List[str] = filtered_sorted_syspath(path_filter)
-    root_dir = Path(get_project_root_dir())
+    root_dir: PurePath = (
+        user_provided_project_root_dir if user_provided_project_root_dir else get_project_root_dir()
+    )
 
-    print(f"Project root: {root_dir}")
-    persist_dir: Path = root_dir / "pths"
+    persist_dir: Path = Path(root_dir / "pths")
 
     if not persist_dir.exists():
         create = force or input(f"Create {persist_dir}? [y,n] ").strip().lower().startswith("y")
@@ -92,6 +97,7 @@ def persist_syspath(force: bool = False, path_filter: Pattern = None) -> None:
         elif path.is_dir():
             rmtree(path)
 
+    paths: List[str] = filtered_sorted_syspath(path_filter)
     for index in range(0, len(paths)):
         path_str = sys.path[index]
         if path_str.startswith(os.fspath(root_dir)):
@@ -105,21 +111,61 @@ def persist_syspath(force: bool = False, path_filter: Pattern = None) -> None:
 
             if not persist_path.exists():
                 with persist_path.open("x") as persist_path_f:
+                    # Write template that can be converted to wherever a project's clones are
+                    # rooted using inject_project_pths_to_site()
                     persist_path_f.write(
-                        f"${{path-to-project}}{os.sep}"
+                        f"${{path_to_project}}{os.sep}"
                         f"{os.fspath(pth_path.relative_to(root_dir.parent))}\n"
                     )
 
 
-def inject_project_pths_to_site(path_to_project: Path = None):
+def inject_project_pths_to_site(user_provided_project_root_dir: PurePath = None) -> None:
     """
     Iterate through all templates in /pathto/projectroot/pths converting the templates to
-    the paths rooted to the current /pathto/projectroot.
+    the paths rooted to the current /pathto/projectroot. If caller did not supply the
+    /pathto/projectroot via 'user_provided_project_root_dir', attempt to determine that.
 
-    :param path_to_project:
-    :return:
+    :param user_provided_project_root_dir: root of project using inject_project_pths_to_site()
     """
-    pass
+    root_dir: PurePath = (
+        user_provided_project_root_dir if user_provided_project_root_dir else get_project_root_dir()
+    )
+
+    persist_dir: Path = Path(root_dir / "pths")
+
+    if not persist_dir.exists():
+        print(f"No pth templates found within {os.fspath(persist_dir)}")
+        return
+
+    substitution_map: Dict[str, str] = {"path_to_project": os.fspath(root_dir)}
+    templates_paths: List[Path] = list(persist_dir.glob("*.pth.template"))
+    templates_paths.sort()
+
+    # TODO: glob in all the files in the site into a list. Remove from the list each one that is
+    #  still relevant; delete all that remain in the list that are no longer used.
+
+    filled_in_path_to_file_map: Dict[str, str] = {}
+    template_path: Path
+    for template_path in templates_paths:
+        template_filename = template_path.name
+        with template_path.open() as template_f:
+            template_str = template_f.read()
+
+        filled_in_path = Template(template_str).substitute(substitution_map)
+        if filled_in_path in filled_in_path_to_file_map:
+            print(
+                f"{template_filename}'s {filled_in_path} already represented with "
+                f"{filled_in_path_to_file_map[filled_in_path]}.\n\tDeleting {template_filename}"
+            )
+            template_path.unlink()
+            continue
+
+        filled_in_path_to_file_map.update({filled_in_path: template_filename})
+
+        site_path: Path = persist_dir / template_path.stem
+        if not site_path.exists():
+            with site_path.open("w") as persist_f:
+                persist_f.write(filled_in_path)
 
 
 def add_srcdirs_to_syspath() -> None:
