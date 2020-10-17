@@ -152,6 +152,25 @@ def get_system_customize_path() -> Path:
     raise InstallError("No system site found!")
 
 
+def get_customize_path() -> Tuple[Path, bool]:
+    """
+    When using venv, site.ENABLE_USER_SITE is False. When using virtual environments,
+    the effort is to isolate the activities within one virtual environment per Python
+    system from other virtual environments. Were the user site enabled within a virtual
+    environment, it would affect other Python virtual environments.
+
+    :return:
+    """
+    is_user_path = False
+    if site.ENABLE_USER_SITE and site.check_enableusersite():
+        customize_path = get_user_customize_path()
+        customize_path.parent.mkdir(parents=True, exist_ok=True)
+        is_user_path = True
+    else:
+        customize_path = get_system_customize_path()
+    return customize_path, is_user_path
+
+
 def get_name_and_relative_path(
     customize_path: Path, syspath_sleuth_path: Optional[Path]
 ) -> Tuple[str, Path]:
@@ -175,22 +194,12 @@ def get_relative_path(path: Path) -> Path:
 
 def inject_sleuth(syspath_sleuth_path: Optional[Path] = None):
 
-    # When using venv, site.ENABLE_USER_SITE is False. When using virtual environments,
-    # the effort is to isolate the activities within one virtual environment per Python
-    # system from other virtual environments. Were the user site enabled within a virtual
-    # environment, it would affect other Python virtual environments.
-    user_path = False
-    if site.ENABLE_USER_SITE and site.check_enableusersite():
-        customize_path = get_user_customize_path()
-        customize_path.parent.mkdir(parents=True, exist_ok=True)
-        user_path = True
-    else:
-        customize_path = get_system_customize_path()
+    customize_path, is_user_path = get_customize_path()
 
     if customize_path and customize_path.exists():
         name, _ = get_name_and_relative_path(customize_path, syspath_sleuth_path)
         sleuth_logger.warning(
-            "Reinstalling %s in %s site...", name, "user" if user_path else "system"
+            "Reinstalling %s in %s site...", name, "user" if is_user_path else "system"
         )
         reverse_patch_sleuth(customize_path)
 
@@ -223,18 +232,13 @@ def uninstall_sleuth():
     # the effort is to isolate the activities within one virtual environment per Python
     # system Python from other virtual environments. Were the user site enabled, it would
     # affect other Python virtual environments.
-    user_path = False
-    if site.ENABLE_USER_SITE and site.check_enableusersite():
-        user_path = True
-        customize_path = get_user_customize_path()
-    else:
-        customize_path = get_system_customize_path()
+    customize_path, is_user_path = get_customize_path()
 
     if not customize_path.exists():
         error_logger.warning(
             "%s was not installed in %s site: %s",
             SysPathSleuth.__name__,
-            "user" if user_path else "system",
+            "user" if is_user_path else "system",
             SysPathSleuth.relative_path(customize_path),
         )
         return
@@ -244,7 +248,7 @@ def uninstall_sleuth():
     sleuth_logger.warning(
         "%s uninstalled from %s site: %s",
         SysPathSleuth.__name__,
-        "user" if user_path else "system",
+        "user" if is_user_path else "system",
         SysPathSleuth.relative_path(customize_path),
     )
 

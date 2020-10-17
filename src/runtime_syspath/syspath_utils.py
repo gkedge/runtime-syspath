@@ -10,6 +10,7 @@ from types import ModuleType
 from typing import Dict, Generator, List, Optional, Pattern, Set, Tuple, Union
 
 from .syspath_path_utils import get_project_root_dir
+from .syspath_sleuth import get_customize_path
 
 _STD_SYSPATH_FILTER: Union[None, Pattern] = None
 
@@ -115,7 +116,7 @@ def persist_syspath(
                     # rooted using inject_project_pths_to_site()
                     persist_path_f.write(
                         f"${{path_to_project}}{os.sep}"
-                        f"{os.fspath(pth_path.relative_to(root_dir.parent))}\n"
+                        f"{os.fspath(pth_path.relative_to(root_dir))}\n"
                     )
 
 
@@ -137,19 +138,34 @@ def inject_project_pths_to_site(user_provided_project_root_dir: PurePath = None)
         print(f"No pth templates found within {os.fspath(persist_dir)}")
         return
 
+    customize_path, _ = get_customize_path()
+    site_path = customize_path.parent
+    # glob in all the files in the site into a list. Remove from the list each one that is still
+    # relevant; delete all that remain in the list that are no longer used.
+    project_site_pths: List[Path] = list(site_path.glob(f"[0-9][0-9][0-9]_{root_dir.stem}_*.pth"))
+    site_pth_map: Dict[str, Path] = {}
+    for project_site_pth in project_site_pths:
+        with project_site_pth.open() as project_site_pth_f:
+            sys_path_entry_parts: Tuple[str, ...] = PurePath(project_site_pth_f.read()).parts
+            index = sys_path_entry_parts.index(root_dir.stem) + 1
+            sys_path_entry = os.sep.join(sys_path_entry_parts[index:])
+            if sys_path_entry in site_pth_map:
+                print(f"{sys_path_entry} represented; deleting {project_site_pth}")
+                project_site_pth.unlink()
+            else:
+                site_pth_map.update({sys_path_entry: project_site_pth})
+
     substitution_map: Dict[str, str] = {"path_to_project": os.fspath(root_dir)}
     templates_paths: List[Path] = list(persist_dir.glob("*.pth.template"))
     templates_paths.sort()
-
-    # TODO: glob in all the files in the site into a list. Remove from the list each one that is
-    #  still relevant; delete all that remain in the list that are no longer used.
 
     filled_in_path_to_file_map: Dict[str, str] = {}
     template_path: Path
     for template_path in templates_paths:
         template_filename = template_path.name
         with template_path.open() as template_f:
-            template_str = template_f.read()
+            template_str = template_f.read().strip()
+        template_str_fragment = template_str[len("${path_to_project}/") :]
 
         filled_in_path = Template(template_str).substitute(substitution_map)
         if filled_in_path in filled_in_path_to_file_map:
@@ -162,10 +178,16 @@ def inject_project_pths_to_site(user_provided_project_root_dir: PurePath = None)
 
         filled_in_path_to_file_map.update({filled_in_path: template_filename})
 
-        site_path: Path = persist_dir / template_path.stem
-        if not site_path.exists():
-            with site_path.open("w") as persist_f:
-                persist_f.write(filled_in_path)
+        site_pth_path: Path = site_path / template_path.stem
+        if template_str_fragment in site_pth_map:
+            site_pth_path = site_pth_map.pop(template_str_fragment)
+
+        if not site_pth_path.exists():
+            with site_pth_path.open("w") as site_pth_path_f:
+                site_pth_path_f.write(filled_in_path)
+
+    for site_pth in site_pth_map:
+        site_pth_map[site_pth].unlink()
 
 
 def add_srcdirs_to_syspath() -> None:
