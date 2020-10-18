@@ -69,7 +69,7 @@ def test_print_syspath(path_filter: str, no_filtering: bool, sort: bool) -> None
 
 
 def test_persist_syspath():
-    persist_syspath(force=True)
+    persist_syspath(force_pth_dir_creation=True)
 
 
 def test_inject_project_pths_to_site():
