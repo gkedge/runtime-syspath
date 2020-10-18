@@ -15,7 +15,7 @@ from click.testing import CliRunner, Result
 
 import runtime_syspath
 from runtime_syspath import syspath_sleuth
-from runtime_syspath.syspath_sleuth import SysPathSleuth
+from runtime_syspath.syspath_sleuth import SysPathSleuth, get_customize_path
 
 
 def test_parse_args_help():
@@ -184,10 +184,7 @@ def test_reverse_patch_sleuth(request, caplog):
 
 def test_inject_sleuth(request, caplog):
     caplog.set_level(logging.INFO)
-    if site.ENABLE_USER_SITE and site.check_enableusersite():
-        customize_path = syspath_sleuth.get_user_customize_path()
-    else:
-        customize_path = syspath_sleuth.get_system_customize_path()
+    customize_path, _ = get_customize_path()
     copied_customize_path = customize_path.with_suffix(syspath_sleuth.PRE_SLEUTH_SUFFIX)
     reverse_patch_path = customize_path.with_suffix(syspath_sleuth.REVERSE_PATCH_SUFFIX)
 
@@ -250,10 +247,7 @@ def test_inject_sleuth(request, caplog):
 
 
 def test_uninstall_sleuth(request, caplog):
-    if site.ENABLE_USER_SITE and site.check_enableusersite():
-        customize_path = syspath_sleuth.get_user_customize_path()
-    else:
-        customize_path = syspath_sleuth.get_system_customize_path()
+    customize_path, _ = get_customize_path()
     reverse_patch_path = customize_path.with_suffix(syspath_sleuth.REVERSE_PATCH_SUFFIX)
 
     def fin():
@@ -311,10 +305,7 @@ def test_uninstall_sleuth(request, caplog):
 def test_main(request, caplog):
     caplog.set_level(logging.INFO)
 
-    if site.ENABLE_USER_SITE and site.check_enableusersite():
-        customize_path = syspath_sleuth.get_user_customize_path()
-    else:
-        customize_path = syspath_sleuth.get_system_customize_path()
+    customize_path, _ = get_customize_path()
     copied_customize_path = customize_path.with_suffix(syspath_sleuth.PRE_SLEUTH_SUFFIX)
     reverse_patch_path = customize_path.with_suffix(syspath_sleuth.REVERSE_PATCH_SUFFIX)
 

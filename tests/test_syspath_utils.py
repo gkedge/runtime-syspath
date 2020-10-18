@@ -1,4 +1,5 @@
 """ pytest module to tests the runtime_syspath.add_srcdirs_to_syspath module"""
+import os
 import re
 import sys
 from pathlib import Path
@@ -12,6 +13,7 @@ from test_subproject_package.test_subproject_subproject import (
 )
 
 from runtime_syspath import add_srcdirs_to_syspath, filtered_sorted_syspath, print_syspath
+from runtime_syspath.syspath_utils import inject_project_pths_to_site, persist_syspath
 
 
 def test_add_srcdirs_to_syspath(root_path: Path) -> None:
@@ -22,7 +24,7 @@ def test_add_srcdirs_to_syspath(root_path: Path) -> None:
 
     # Test to see if runtime_syspath's 'src' directory in now in sys.path
     src_path: Path = root_path / "src"
-    src_path_str: str = str(src_path)
+    src_path_str: str = os.fspath(src_path)
     sys_paths: List[str] = list()
     found_src_path: bool = False
     syspath_member: str
@@ -64,6 +66,14 @@ def test_print_syspath(path_filter: str, no_filtering: bool, sort: bool) -> None
         no_filtering=no_filtering,
         sort=sort,
     )
+
+
+def test_persist_syspath():
+    persist_syspath(force_pth_dir_creation=True)
+
+
+def test_inject_project_pths_to_site():
+    inject_project_pths_to_site()
 
 
 def test_get_max_dots_up_to_relative_import_in_this_module() -> None:
