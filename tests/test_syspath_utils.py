@@ -12,8 +12,11 @@ from test_subproject_package.test_subproject_subproject import (
     test_subproject_subproject_package_mod,
 )
 
-from runtime_syspath import add_srcdirs_to_syspath, filtered_sorted_syspath, print_syspath
+from runtime_syspath import add_srcdirs_to_syspath, filtered_sorted_syspath, print_syspath, \
+    get_project_root_dir
 from runtime_syspath.syspath_utils import inject_project_pths_to_site, persist_syspath
+
+from tests.conftest import PROJECT_ROOT_DIR
 
 
 def test_add_srcdirs_to_syspath(root_path: Path) -> None:
@@ -100,3 +103,7 @@ def test_get_max_dots_up_to_relative_import_in_this_module() -> None:
         dots,
     ) = test_subproject_subproject_package_mod.number_of_dots_up_to_relatively_import_on_import()
     assert package == "test_subproject_package" and dots == "."
+
+
+def test_get_project_root_dir():
+    assert get_project_root_dir() == PROJECT_ROOT_DIR

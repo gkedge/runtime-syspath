@@ -6,7 +6,7 @@ from itertools import chain
 from pathlib import Path, PurePath
 from string import Template
 from types import ModuleType
-from typing import Dict, Generator, List, Optional, Pattern, Set, Tuple, Union
+from typing import Dict, List, Optional, Pattern, Set, Tuple, Union
 
 from .syspath_path_utils import get_project_root_dir
 from .syspath_sleuth import get_customize_path
@@ -228,8 +228,6 @@ def get_pth_templates(template_dir: Path) -> Dict[Path, str]:
 
 def add_srcdirs_to_syspath(user_provided_project_dir: PurePath = None) -> None:
     """
-
-
     Add all src directories under current working directory to sys.path. If caller did not supply
     the /pathto/projectroot via 'user_provided_project_dir', attempt to
     determine that, walk up ancestry to find a directory containing a 'src' directory. Waking up
@@ -246,28 +244,18 @@ def add_srcdirs_to_syspath(user_provided_project_dir: PurePath = None) -> None:
 
     :return: None
     """
-    root_path: Path = Path.cwd()
-
-    while not (root_path / "src").exists() or not (root_path / "src").is_dir():
-        if not root_path.parent:
-            raise RuntimeError(
-                f"The CWD {Path.cwd().as_posix()} (and any parents of that path) do not contain a "
-                f"'src' directory."
-            )
-        root_path = root_path.parent
-
-    if root_path != Path.cwd():
-        print(f"Searching for 'src' dirs from {root_path.as_posix()}")
+    project_dir: Path = (
+        Path(user_provided_project_dir)
+        if user_provided_project_dir
+        else Path(get_project_root_dir())
+    )
 
     prior_sys_path = sys.path.copy()
 
-    all_src_dirs: Generator[Path, None, None] = root_path.glob("src")
-    all_test_src_dirs: Generator[Path, None, None] = root_path.glob("tests/**/src")
-
-    tested_src: Path
-    for tested_src in chain.from_iterable([all_src_dirs, all_test_src_dirs]):
-        tested_src_str = str(tested_src)
-        if tested_src.is_dir() and tested_src_str not in sys.path:
+    src: Path
+    for src in chain.from_iterable([project_dir.glob("src"), project_dir.glob("tests/**/src")]):
+        tested_src_str = str(src)
+        if src.is_dir() and tested_src_str not in sys.path:
             sys.path.append(tested_src_str)
 
     diff_path_strs: Set[str] = set(prior_sys_path).symmetric_difference(set(sys.path))
