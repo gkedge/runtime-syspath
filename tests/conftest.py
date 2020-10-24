@@ -1,4 +1,4 @@
-""" pytest configuration for this directory (and their sub-directories)"""
+""" pytest configuration for this directory (and its sub-directories)"""
 import os
 import sys
 from pathlib import PurePath

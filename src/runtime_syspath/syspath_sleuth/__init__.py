@@ -1,6 +1,8 @@
+import atexit
 import importlib
 import inspect
 import logging
+import os
 import shutil
 import site
 import sys
@@ -302,3 +304,18 @@ def syspath_sleuth_main(inject: bool, custom: Optional[str], verbose: Optional[b
             uninstall_sleuth()
     except Exception as ex:
         error_logger.error("%s failed: %s", "Inject" if inject else "Uninstall", ex)
+
+
+def is_install_on_import():
+    return bool(
+        os.getenv("SYSPATH_SLEUTH_INSTALL_ON_IMPORT") is not None
+        and os.getenv("SYSPATH_SLEUTH_KILL") is None
+    )
+
+
+if is_install_on_import():
+    # WARNING: This could be surprising since it would be rather easy to have SysPathSleuth install
+    # without seeming to do much.
+    error_logger.warning("Installing SysPathSleuth on import.")
+    inject_sleuth()
+    atexit.register(uninstall_sleuth)
