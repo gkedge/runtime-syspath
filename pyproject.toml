@@ -37,14 +37,14 @@ importlib-metadata = "^2.0.0"
 
 [tool.poetry.dev-dependencies]
 black = { version = "^20.8b1", extras = ["d"] }
-coverage = "^5.2.1"
+coverage = "~5.*"
 isort = "~5.*"
 pylint = "~2.*"
 pytest = "~6.*"
-pytest-dependency = "^0.5.1"
+pytest-dependency = "~0.*"
 wheel = "tox-wheel"
-wrapt = "^1.12.1"
-mypy = "^0.782"
+wrapt = "~1.*"
+mypy = "~0.*"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
